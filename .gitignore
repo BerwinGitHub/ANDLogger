@@ -58,6 +58,7 @@ workbench/packages
 .idea/workspace.xml
 
 bin
+out
 
 workbench/.DS_Store
 
