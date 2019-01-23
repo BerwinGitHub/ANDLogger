@@ -59,6 +59,7 @@ workbench/packages
 
 bin
 out
+.idea
 
 workbench/.DS_Store
 
