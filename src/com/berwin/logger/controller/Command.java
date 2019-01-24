@@ -11,6 +11,7 @@ public class Command implements Runnable {
 
     private Thread thread = null;
     private Process process = null;
+    private boolean isRunning = false;
 
     public interface CommandListener {
         void onStart(String cmd);
@@ -62,18 +63,18 @@ public class Command implements Runnable {
     }
 
     public void startWithSynchronize() {
+        this.isRunning = true;
         this.run();
     }
 
     public void start() {
+        this.isRunning = true;
         this.thread = new Thread(this);
         this.thread.start();
     }
 
     public void stop() {
-        if (this.process != null)
-            this.process.destroyForcibly();
-        this.thread.interrupt();
+        this.isRunning = false;
     }
 
     @Override
@@ -112,17 +113,17 @@ public class Command implements Runnable {
                     process = Runtime.getRuntime().exec(command);
                     reader = new BufferedReader(new InputStreamReader(process.getInputStream(), MainView.IS_WINDOWS ? "GBK" : "UTF-8"));
                     String line;
-                    while ((line = reader.readLine()) != null)
+                    while (this.isRunning && (line = reader.readLine()) != null)
                         if (this.listener != null)
                             this.listener.onMessage(line);
-                    // 阻塞等待
+                    if (!this.isRunning)
+                        break;
                     process.waitFor();
-                    // 非阻塞
-//                     p.exitValue();
+                    // 阻塞等待
                     break;
                 }
-//                p.waitFor();
             } catch (Exception e) {
+                this.isRunning = false;
                 e.printStackTrace();
                 if (this.listener != null)
                     this.listener.onError(e.getMessage());

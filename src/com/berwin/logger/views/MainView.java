@@ -8,11 +8,13 @@ import com.berwin.logger.views.components.VerticalFlowLayout;
 import com.berwin.logger.views.dialogs.ConfigDialog;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -150,7 +152,9 @@ public class MainView extends JFrame {
         });
         // 正则表达式
         this.cbRegex = new JCheckBox("Regex");
+        this.cbRegex.setSelected(UserDefault.getInstance().getValueForKey("regex", false));
         north.add(cbRegex);
+        this.cbRegex.addActionListener(e -> requestLogcat());
 
     }
 
@@ -175,7 +179,6 @@ public class MainView extends JFrame {
             new Command(cmdPath + " start-server").start();
             this.requestLogcat();
         });
-
         // 關閉按钮
         ImageIcon iconStop = new ImageIcon("res/images/stop.png");
         JButton btnStop = new JButton(iconStop);
@@ -183,28 +186,94 @@ public class MainView extends JFrame {
         btnStop.setPreferredSize(new Dimension(iconStart.getIconWidth() + 10, iconStart.getIconHeight() + 10));
         nEast.add(btnStop);
         btnStop.addActionListener(e -> {
+            if (this.commond != null)
+                this.commond.stop();
+        });
+        // 刷新按钮
+        ImageIcon iconRefresh = new ImageIcon("res/images/refresh.png");
+        JButton btnRefresh = new JButton(iconRefresh);
+        btnRefresh.setToolTipText("刷新ADB");
+        btnRefresh.setPreferredSize(new Dimension(iconRefresh.getIconWidth() + 10, iconRefresh.getIconHeight() + 10));
+        nEast.add(btnRefresh);
+        btnRefresh.addActionListener(e -> {
             String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
             new Command(cmdPath + " kill-server").start();
+            new Command(cmdPath + " start-server").startWithSynchronize();
+            this.requestDevices();
+            this.requestPackages();
+            logger("刷新成功").info();
+//            this.requestLogcat();
+        });
+        // 安装按钮
+        ImageIcon iconInstall = new ImageIcon("res/images/install.png");
+        JButton btnInstall = new JButton(iconInstall);
+        btnInstall.setToolTipText("安装APK");
+        btnInstall.setPreferredSize(new Dimension(iconInstall.getIconWidth() + 10, iconInstall.getIconHeight() + 10));
+        nEast.add(btnInstall);
+        btnInstall.addActionListener(e -> {
+            String lastAPKPath = UserDefault.getInstance().getValueForKey("last_apk_path", "");
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("选择APK文件");
+            fileChooser.setCurrentDirectory(new File(lastAPKPath));
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            fileChooser.addChoosableFileFilter(new FileFilter() {
+                @Override
+                public boolean accept(File f) {
+                    return f.getName().endsWith(".apk");
+                }
+
+                @Override
+                public String getDescription() {
+                    return "*.apk";
+                }
+            });
+            int result = fileChooser.showDialog(this, "确认");
+            if (JFileChooser.APPROVE_OPTION == result) {
+                String path = fileChooser.getSelectedFile().getPath();
+                UserDefault.getInstance().setValueForKey("last_apk_path", path);
+                String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+                new Command(cmdPath + " install " + path, new Command.CommandListenerAdapter() {
+                    @Override
+                    public void onStart(String cmd) {
+                        super.onStart(cmd);
+                        logger("开始安装").info();
+                        logger(cmd).info();
+                    }
+
+                    @Override
+                    public void onMessage(String content) {
+                        super.onMessage(content);
+                        logger(content).info();
+                    }
+
+                    @Override
+                    public void onFinished() {
+                        super.onFinished();
+                        logger("安装完成").info();
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        super.onError(error);
+                        logger("安装出错").error();
+                        logger(error).error();
+                    }
+                }).start();
+            }
         });
         // 删除按钮
         ImageIcon iconDelete = new ImageIcon("res/images/delete.png");
         JButton btnDelete = new JButton(iconDelete);
-        btnDelete.setToolTipText("情况日志");
+        btnDelete.setToolTipText("清除日志");
         btnDelete.setPreferredSize(new Dimension(iconDelete.getIconWidth() + 10, iconDelete.getIconHeight() + 10));
         nEast.add(btnDelete);
         btnDelete.addActionListener(e -> {
-            String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
-            new Command(cmdPath + " -c").start();
-            //
-            Document doc = this.tpLoggerContainor.getDocument();
-            try {
-                doc.remove(0, doc.getLength());
-            } catch (BadLocationException e1) {
-                e1.printStackTrace();
-            }
+            this.clearLogcat();
+            this.clearView();
         });
 
         // 底部按钮
+        MainView.isScrollBottom = UserDefault.getInstance().getValueForKey("isScrollBottom", true);
         ImageIcon iconBottom = new ImageIcon(isScrollBottom ? "res/images/bottom_selected.png" : "res/images/bottom.png");
         JButton btnBottom = new JButton(iconBottom);
         btnBottom.setToolTipText("始终滚动到底部");
@@ -212,6 +281,7 @@ public class MainView extends JFrame {
         nEast.add(btnBottom);
         btnBottom.addActionListener(e -> {
             this.isScrollBottom = !this.isScrollBottom;
+            UserDefault.getInstance().setValueForKey("isScrollBottom", isScrollBottom);
             btnBottom.setIcon(new ImageIcon(isScrollBottom ? "res/images/bottom_selected.png" : "res/images/bottom.png"));
         });
 
@@ -227,6 +297,7 @@ public class MainView extends JFrame {
 
     // 請求連接的設備
     private void requestDevices() {
+        cbDevices.removeAllItems();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         new Command(new String[]{
 //                cmdPath + " devices -l",
@@ -252,7 +323,7 @@ public class MainView extends JFrame {
             public void onError(String error) {
                 MainView.this.logger(error).error();
             }
-        }).start();
+        }).startWithSynchronize();
     }
 
     // 請求連接的設備
@@ -272,16 +343,53 @@ public class MainView extends JFrame {
             public void onError(String error) {
                 MainView.this.logger(error).error();
             }
-        }).start();
+        }).startWithSynchronize();
+    }
+
+    private void clearLogcat() {
+        String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        new Command(cmdPath + " logcat -c", null).startWithSynchronize();
+    }
+
+    private void clearView() {
+        Document doc = this.tpLoggerContainor.getDocument();
+        try {
+            doc.remove(0, doc.getLength());
+        } catch (BadLocationException e1) {
+            e1.printStackTrace();
+        }
     }
 
     private void requestLogcat() {
+        this.clearLogcat();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
-        String target = tfSearch.getText().equals("") ? "*" : tfSearch.getText();
-        String cmd = String.format("%s logcat -v time %s:%s | grep \"%s\" find \"%s\"", cmdPath, target, Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex()), cbPackages.getSelectedItem(), tfSearch.getText());
+        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
+        String packageName = (String) cbPackages.getSelectedItem();
+        String search = tfSearch.getText().trim();
+        boolean isRegex = this.cbRegex.isSelected();
+        String cmd;
+        if (!packageName.equals("*")) {
+            if (search.equals("")) {
+                cmd = String.format("%s logcat -v time | grep \"^%s.%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem());
+            } else {
+                cmd = String.format("%s logcat -v time | grep \"^%s.%s|^..%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), search);
+            }
+        } else {
+            if (search.equals("")) {
+                cmd = String.format("%s logcat -v time | grep \"^%s\"", cmdPath, logLevelChar);
+            } else {
+                cmd = String.format("%s logcat -v time | grep \"^%s|..%s\"", cmdPath, logLevelChar, search);
+            }
+        }
+//            cmd = String.format("%s logcat -v time *:%s | grep \"%s\" & find \"%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), tfSearch.getText());
         if (this.commond != null)
             this.commond.stop();
         this.commond = new Command(cmd, new Command.CommandListenerAdapter() {
+            @Override
+            public void onStart(String cmd) {
+                super.onStart(cmd);
+                logger(cmd).info();
+            }
 
             @Override
             public void onMessage(String content) {
@@ -296,7 +404,7 @@ public class MainView extends JFrame {
 
             @Override
             public void onError(String error) {
-                MainView.this.logger(error).error();
+                logger(error).error();
             }
         });
         this.commond.start();

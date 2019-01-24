@@ -10,8 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Logger {
-    public static final int MAX_CACHE = 1024 * 512;
-
     public static final String LOG_VERBOSE = "Verbose";
     public static final String LOG_DEBUG = "Debug";
     public static final String LOG_INFO = "Info";
@@ -130,9 +128,6 @@ public class Logger {
         str = str + "\n";
         try {
             doc.insertString(doc.getLength(), str, attrSet);
-            int delta = doc.getLength() - MAX_CACHE;
-            if (delta > 0)
-                doc.remove(0, delta);
         } catch (BadLocationException e) {
             System.out.println("BadLocationException: " + e);
         }
@@ -148,7 +143,7 @@ public class Logger {
         StyleConstants.setFontSize(attrSet, fontSize);
         //字体大小
         insert(str, attrSet);
-        if (!MainView.isScrollBottom)
+        if (MainView.isScrollBottom)
             this.scrollPane.getVerticalScrollBar().setValue(this.scrollPane.getVerticalScrollBar().getMaximum());
     }
 
