@@ -8,8 +8,6 @@ import com.berwin.logger.utility.Utility;
 import com.berwin.logger.views.MainView;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;

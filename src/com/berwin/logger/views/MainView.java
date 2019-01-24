@@ -14,11 +14,13 @@ import javax.swing.text.Document;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MainView extends JFrame {
+public class MainView extends JFrame implements WindowListener {
     public static final boolean IS_WINDOWS = (System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1);
     public static final String[] LOG_LEVELS = {Logger.LOG_VERBOSE, Logger.LOG_DEBUG, Logger.LOG_INFO, Logger.LOG_WARN, Logger.LOG_ERROR, Logger.LOG_ASSERT};
     public static MainView self = null;
@@ -80,6 +82,7 @@ public class MainView extends JFrame {
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        this.addWindowListener(this);
         this.setLayout(new BorderLayout());
         this.initMenuBar();
         this.initNorth();
@@ -436,4 +439,39 @@ public class MainView extends JFrame {
         return new Logger(this.spLoggerContainor, this.tpLoggerContainor, content);
     }
 
+    @Override
+    public void windowOpened(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowClosing(WindowEvent e) {
+        if (this.commond != null)
+            this.commond.stop();
+    }
+
+    @Override
+    public void windowClosed(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowIconified(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowDeiconified(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowActivated(WindowEvent e) {
+
+    }
+
+    @Override
+    public void windowDeactivated(WindowEvent e) {
+
+    }
 }
