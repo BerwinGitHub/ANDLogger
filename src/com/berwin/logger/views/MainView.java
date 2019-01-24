@@ -19,8 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainView extends JFrame {
-    public static final String MARK_DEVICES = "device";
-
     public static final boolean IS_WINDOWS = (System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1);
     public static final String[] LOG_LEVELS = {Logger.LOG_VERBOSE, Logger.LOG_DEBUG, Logger.LOG_INFO, Logger.LOG_WARN, Logger.LOG_ERROR, Logger.LOG_ASSERT};
     public static MainView self = null;
@@ -76,7 +74,7 @@ public class MainView extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        Dimension dimension = Utility.getScreenSize(0.7f, 0.5f);
+        Dimension dimension = Utility.getScreenSize(0.65f, 0.5f);
         this.setSize(dimension);
         this.setTitle("Android Logcat");
         this.setLocationRelativeTo(null);
@@ -107,6 +105,17 @@ public class MainView extends JFrame {
         JMenuItem compileItem = new JMenuItem("ADB设置");
         settingMenu.add(compileItem);
         compileItem.addActionListener(e -> new ConfigDialog().setVisible(true));
+
+        JMenuItem aboutItem = new JMenuItem("关于软件");
+        settingMenu.add(aboutItem);
+        aboutItem.addActionListener(e -> {
+            String name = "关于软件";
+            String version = "1.0.0";
+            String content = "安卓日志查看程序软件\r\n@版本: 1.0.0\r\n@作者: 唐博文";
+            String txt = name + "(" + version + ")" + "\r\n\r\n" + content;
+            JOptionPane.showMessageDialog(MainView.this, txt, "",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
     }
 
     private void initNorth() {
@@ -153,7 +162,7 @@ public class MainView extends JFrame {
         // 正则表达式
         this.cbRegex = new JCheckBox("Regex");
         this.cbRegex.setSelected(UserDefault.getInstance().getValueForKey("regex", false));
-        north.add(cbRegex);
+//        north.add(cbRegex);
         this.cbRegex.addActionListener(e -> requestLogcat());
 
     }

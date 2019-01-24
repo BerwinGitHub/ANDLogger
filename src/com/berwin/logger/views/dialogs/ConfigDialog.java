@@ -27,7 +27,7 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
     private JTextField tfPRJRoot = new JTextField();
 
     public ConfigDialog() {
-        super(MainView.self, "ADB设置", 0.9f);
+        super(MainView.self, "ADB设置", 0.75f);
 
         this.addWindowListener(this);
         this.setLayout(new BorderLayout());
