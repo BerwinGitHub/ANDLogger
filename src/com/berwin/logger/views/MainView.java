@@ -1,22 +1,27 @@
 package com.berwin.logger.views;
 
 import com.berwin.logger.controller.Command;
+import com.berwin.logger.entity.Log;
 import com.berwin.logger.entity.Logger;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.utility.Utility;
+import com.berwin.logger.views.components.StyleTable;
 import com.berwin.logger.views.components.VerticalFlowLayout;
 import com.berwin.logger.views.dialogs.ConfigDialog;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableColumn;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
+import javax.swing.text.Style;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
+import java.awt.event.*;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,11 +41,15 @@ public class MainView extends JFrame implements WindowListener {
     private JCheckBox cbRegex = null;
     // 中间日志
     private JScrollPane spLoggerContainor = null;
-    private JTextPane tpLoggerContainor = null;
+    //    private JTextPane tpLoggerContainor = null;
+    //
+    private StyleTable table = null;
 
     public static boolean isScrollBottom = false;
 
     private Command commond = null;
+
+    private int isNeedBottom = 0;
 
     public MainView() {
         MainView.self = this;
@@ -76,7 +85,7 @@ public class MainView extends JFrame implements WindowListener {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        Dimension dimension = Utility.getScreenSize(0.65f, 0.5f);
+        Dimension dimension = Utility.getScreenSize(0.85f, 0.65f);
         this.setSize(dimension);
         this.setTitle("Android Logcat");
         this.setLocationRelativeTo(null);
@@ -90,7 +99,7 @@ public class MainView extends JFrame implements WindowListener {
 
         String adbPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         if (adbPath.equals("")) {
-            this.logger("请在 [设置]-[ADB设置] 中选择adb.exe路径").error();
+            this.table.addLog(Log.buildLogForText("请在 [设置]-[ADB设置] 中选择adb.exe路径", Log.LEVEL_E));
         } else {
             this.requestDevices();
             this.requestPackages();
@@ -144,7 +153,7 @@ public class MainView extends JFrame implements WindowListener {
             this.requestLogcat();
         });
         // 搜索框
-        this.tfSearch = new JTextField(50);
+        this.tfSearch = new JTextField(40);
         north.add(tfSearch);
         tfSearch.addKeyListener(new KeyAdapter() {
             @Override
@@ -153,12 +162,12 @@ public class MainView extends JFrame implements WindowListener {
                 if (tfSearch.getText().trim().equals(""))
                     return;
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    try {
-                        tpLoggerContainor.getDocument().remove(0, tpLoggerContainor.getDocument().getLength());
-                        requestLogcat();
-                    } catch (BadLocationException e1) {
-                        e1.printStackTrace();
-                    }
+//                    try {
+////                        tpLoggerContainor.getDocument().remove(0, tpLoggerContainor.getDocument().getLength());
+//                        requestLogcat();
+//                    } catch (BadLocationException e1) {
+//                        e1.printStackTrace();
+//                    }
                 }
             }
         });
@@ -177,8 +186,8 @@ public class MainView extends JFrame implements WindowListener {
 
         // 左边
         JPanel nEast = new JPanel();
-        nEast.setLayout(new VerticalFlowLayout(VerticalFlowLayout.BOTTOM));
-        center.add(nEast, BorderLayout.EAST);
+        nEast.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
+        center.add(nEast, BorderLayout.WEST);
 
         // 開始按钮
         ImageIcon iconStart = new ImageIcon("res/images/start.png");
@@ -213,7 +222,7 @@ public class MainView extends JFrame implements WindowListener {
             new Command(cmdPath + " start-server").startWithSynchronize();
             this.requestDevices();
             this.requestPackages();
-            logger("刷新成功").info();
+            this.table.addLog(Log.buildLogForText("刷新成功", Log.LEVEL_V));
 //            this.requestLogcat();
         });
         // 安装按钮
@@ -248,27 +257,27 @@ public class MainView extends JFrame implements WindowListener {
                     @Override
                     public void onStart(String cmd) {
                         super.onStart(cmd);
-                        logger("开始安装").info();
-                        logger(cmd).info();
+                        table.addLog(Log.buildLogForText("开始安装", Log.LEVEL_I));
+                        table.addLog(Log.buildLogForText(cmd, Log.LEVEL_I));
                     }
 
                     @Override
                     public void onMessage(String content) {
                         super.onMessage(content);
-                        logger(content).info();
+                        table.addLog(Log.buildLogForText(content, Log.LEVEL_I));
                     }
 
                     @Override
                     public void onFinished() {
                         super.onFinished();
-                        logger("安装完成").info();
+                        table.addLog(Log.buildLogForText("安装完成", Log.LEVEL_I));
                     }
 
                     @Override
                     public void onError(String error) {
                         super.onError(error);
-                        logger("安装出错").error();
-                        logger(error).error();
+                        table.addLog(Log.buildLogForText("安装出错", Log.LEVEL_E));
+                        table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
                     }
                 }).start();
             }
@@ -297,13 +306,27 @@ public class MainView extends JFrame implements WindowListener {
             btnBottom.setIcon(new ImageIcon(isScrollBottom ? "res/images/bottom_selected.png" : "res/images/bottom.png"));
         });
 
+
+//        this.tpLoggerContainor = new JTextPane();
+//        this.spLoggerContainor.setViewportView(this.tpLoggerContainor);
+//        this.tpLoggerContainor.setEditable(false);
+
+        String[] titles = new String[]{"Level", "Time", "PID", "TID", "Tag", "Text"};
+        this.table = new StyleTable(titles);
         // 中间
-        this.spLoggerContainor = new JScrollPane();
+        this.spLoggerContainor = new JScrollPane(this.table);
         center.add(spLoggerContainor, BorderLayout.CENTER);
 
-        this.tpLoggerContainor = new JTextPane();
-        this.spLoggerContainor.setViewportView(this.tpLoggerContainor);
-        this.tpLoggerContainor.setEditable(false);
+        // 滚动到底部
+        this.spLoggerContainor.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+            @Override
+            public void adjustmentValueChanged(AdjustmentEvent evt) {
+                if (evt.getAdjustmentType() == AdjustmentEvent.TRACK && isNeedBottom <= 3) {
+                    spLoggerContainor.getVerticalScrollBar().setValue(spLoggerContainor.getVerticalScrollBar().getModel().getMaximum() - spLoggerContainor.getVerticalScrollBar().getModel().getExtent());
+                    isNeedBottom++;
+                }
+            }
+        });
     }
 
 
@@ -333,13 +356,14 @@ public class MainView extends JFrame implements WindowListener {
 
             @Override
             public void onError(String error) {
-                MainView.this.logger(error).error();
+                table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
             }
         }).startWithSynchronize();
     }
 
     // 請求連接的設備
     private void requestPackages() {
+        java.util.List<String> packageList = new ArrayList<String>();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         new Command(cmdPath + " shell pm list packages", new Command.CommandListenerAdapter() {
 
@@ -348,12 +372,20 @@ public class MainView extends JFrame implements WindowListener {
                 if ("".equals(content))
                     return;
                 content = content.replaceAll("package:", "");
-                cbPackages.addItem(content);
+                packageList.add(content);
             }
 
             @Override
             public void onError(String error) {
-                MainView.this.logger(error).error();
+                table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
+            }
+
+            @Override
+            public void onFinished() {
+                super.onFinished();
+                Collections.sort(packageList);
+                for (String pkg : packageList)
+                    cbPackages.addItem(pkg);
             }
         }).startWithSynchronize();
     }
@@ -364,34 +396,37 @@ public class MainView extends JFrame implements WindowListener {
     }
 
     private void clearView() {
-        Document doc = this.tpLoggerContainor.getDocument();
-        try {
-            doc.remove(0, doc.getLength());
-        } catch (BadLocationException e1) {
-            e1.printStackTrace();
-        }
+//        Document doc = this.tpLoggerContainor.getDocument();
+//        try {
+//            doc.remove(0, doc.getLength());
+//        } catch (BadLocationException e1) {
+//            e1.printStackTrace();
+//        }
+        this.table.removeAllItems();
     }
 
     private void requestLogcat() {
         this.clearLogcat();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
-        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
+//        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
         String packageName = (String) cbPackages.getSelectedItem();
-        String search = tfSearch.getText().trim();
+//        String search = tfSearch.getText().trim();
         boolean isRegex = this.cbRegex.isSelected();
         String cmd;
         if (!packageName.equals("*")) {
-            if (search.equals("")) {
-                cmd = String.format("%s logcat -v time | grep \"^%s.%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem());
-            } else {
-                cmd = String.format("%s logcat -v time | grep \"^%s.%s|^..%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), search);
-            }
+            cmd = String.format("%s logcat -v time | grep \"^%s\"", cmdPath, cbPackages.getSelectedItem());
+//            if (search.equals("")) {
+//                cmd = String.format("%s logcat -v time | grep \"^%s.%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem());
+//            } else {
+//                cmd = String.format("%s logcat -v time | grep \"^%s.%s|^..%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), search);
+//            }
         } else {
-            if (search.equals("")) {
-                cmd = String.format("%s logcat -v time | grep \"^%s\"", cmdPath, logLevelChar);
-            } else {
-                cmd = String.format("%s logcat -v time | grep \"^%s|..%s\"", cmdPath, logLevelChar, search);
-            }
+            cmd = String.format("%s logcat", cmdPath);
+//            if (search.equals("")) {
+//                cmd = String.format("%s logcat -v time | grep \"^%s\"", cmdPath, logLevelChar);
+//            } else {
+//                cmd = String.format("%s logcat -v time | grep \"^%s|..%s\"", cmdPath, logLevelChar, search);
+//            }
         }
 //            cmd = String.format("%s logcat -v time *:%s | grep \"%s\" & find \"%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), tfSearch.getText());
         if (this.commond != null)
@@ -400,44 +435,40 @@ public class MainView extends JFrame implements WindowListener {
             @Override
             public void onStart(String cmd) {
                 super.onStart(cmd);
-                logger(cmd).info();
+                table.addLog(Log.buildLogForText(cmd, Log.LEVEL_I));
             }
 
             @Override
             public void onMessage(String content) {
                 String target = tfSearch.getText();
                 if (!content.equals(""))
-                    if (target.equals("")) {
-                        MainView.this.logger(content).type(cbLogLevels.getSelectedIndex());
-                    } else if (content.indexOf(target) != -1) {
-                        MainView.this.logger(content).type(cbLogLevels.getSelectedIndex());
-                    }
+                    table.addLog(Log.buildLogFromText(content));
             }
 
             @Override
             public void onError(String error) {
-                logger(error).error();
+                table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
             }
         });
         this.commond.start();
     }
 
     public void find(String string) {
-        try {
-            Document doc = tpLoggerContainor.getDocument();
-            String content = doc.getText(0, doc.getLength());
-            Pattern pattern = Pattern.compile(string);
-            Matcher matcher = pattern.matcher(content);
-            boolean b = matcher.find();
-            System.out.println(b);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Document doc = tpLoggerContainor.getDocument();
+//            String content = doc.getText(0, doc.getLength());
+//            Pattern pattern = Pattern.compile(string);
+//            Matcher matcher = pattern.matcher(content);
+//            boolean b = matcher.find();
+//            System.out.println(b);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
-    public Logger logger(String content) {
-        return new Logger(this.spLoggerContainor, this.tpLoggerContainor, content);
-    }
+//    public Logger logger(String content) {
+//        return new Logger(this.spLoggerContainor, null, content);
+//    }
 
     @Override
     public void windowOpened(WindowEvent e) {
