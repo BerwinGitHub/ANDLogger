@@ -1,8 +1,7 @@
 package com.berwin.logger.views;
 
 import com.berwin.logger.controller.Command;
-import com.berwin.logger.entity.Log;
-import com.berwin.logger.entity.Logger;
+import com.berwin.logger.entity.*;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.utility.Utility;
 import com.berwin.logger.views.components.StyleTable;
@@ -10,24 +9,18 @@ import com.berwin.logger.views.components.VerticalFlowLayout;
 import com.berwin.logger.views.dialogs.ConfigDialog;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableColumn;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
-import javax.swing.text.Style;
+import javax.swing.plaf.ColorUIResource;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Enumeration;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MainView extends JFrame implements WindowListener {
     public static final boolean IS_WINDOWS = (System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1);
-    public static final String[] LOG_LEVELS = {Logger.LOG_VERBOSE, Logger.LOG_DEBUG, Logger.LOG_INFO, Logger.LOG_WARN, Logger.LOG_ERROR, Logger.LOG_ASSERT};
     public static MainView self = null;
     // 设备选择框
     private JComboBox<String> cbDevices = null;
@@ -37,19 +30,21 @@ public class MainView extends JFrame implements WindowListener {
     private JComboBox<String> cbLogLevels = null;
     // 搜索框
     private JTextField tfSearch = null;
+    private JCheckBox cbWords = null;
+    private JCheckBox cbMatchCase = null;
     // 正则表达式
     private JCheckBox cbRegex = null;
     // 中间日志
     private JScrollPane spLoggerContainor = null;
+    private Filter filter = null;
     //    private JTextPane tpLoggerContainor = null;
     //
     private StyleTable table = null;
 
-    public static boolean isScrollBottom = false;
+    private boolean isScrollBottom = false;
 
     private Command commond = null;
 
-    private int isNeedBottom = 0;
 
     public MainView() {
         MainView.self = this;
@@ -78,6 +73,7 @@ public class MainView extends JFrame implements WindowListener {
             if ("Mac OS X".equals(System.getProperties().getProperty("os.name"))) {
                 UIManager
                         .setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                UIManager.put("Table.gridColor", new ColorUIResource(new Color(230, 230, 230)));
             } else {
                 UIManager
                         .setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
@@ -105,6 +101,8 @@ public class MainView extends JFrame implements WindowListener {
             this.requestPackages();
 //            this.requestLogcat();
         }
+
+        this.updateFilter();
     }
 
     private void initMenuBar() {
@@ -132,51 +130,84 @@ public class MainView extends JFrame implements WindowListener {
 
     private void initNorth() {
         JPanel north = new JPanel();
-        north.setLayout(new FlowLayout(FlowLayout.LEFT));
+        north.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
         this.add(north, BorderLayout.NORTH);
+
+        JPanel northFirst = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        north.add(northFirst);
         // 设备选择框 new String[]{"Xiaomi MI 4LTE Android 6.0.1, API 23", "Meizu NOTE 3 Android 7.0.1, API 25"}
         this.cbDevices = new JComboBox<String>();
-        north.add(cbDevices);
+        northFirst.add(cbDevices);
         // package 选择 new String[]{"com.google.googleplay", "com.berwin.lessmore"}
         this.cbPackages = new JComboBox<String>();
-        north.add(cbPackages);
+        northFirst.add(cbPackages);
         cbPackages.addItem("*");
         cbPackages.addActionListener(e -> {
             this.requestLogcat();
         });
         // log level
-        this.cbLogLevels = new JComboBox<String>(LOG_LEVELS);
+        this.cbLogLevels = new JComboBox(LogType.getLogTypes());
         this.cbLogLevels.setSelectedIndex(UserDefault.getInstance().getValueForKey("log_level", 0));
-        north.add(cbLogLevels);
+        northFirst.add(cbLogLevels);
         this.cbLogLevels.addActionListener(e -> {
             UserDefault.getInstance().setValueForKey("log_level", this.cbLogLevels.getSelectedIndex());
-            this.requestLogcat();
+//            this.requestLogcat();
+            this.updateFilter();
         });
+        JPanel northSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        north.add(northSecond);
         // 搜索框
         this.tfSearch = new JTextField(40);
-        north.add(tfSearch);
-        tfSearch.addKeyListener(new KeyAdapter() {
+        northSecond.add(tfSearch);
+//        tfSearch.addKeyListener(new KeyAdapter() {
+//            @Override
+//            public void keyPressed(KeyEvent e) {
+//                super.keyPressed(e);
+//                MainView.this.updateFilter();
+////                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+////                }
+//            }
+//        });
+        tfSearch.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void keyPressed(KeyEvent e) {
-                super.keyPressed(e);
-                if (tfSearch.getText().trim().equals(""))
-                    return;
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-//                    try {
-////                        tpLoggerContainor.getDocument().remove(0, tpLoggerContainor.getDocument().getLength());
-//                        requestLogcat();
-//                    } catch (BadLocationException e1) {
-//                        e1.printStackTrace();
-//                    }
-                }
+            public void insertUpdate(DocumentEvent e) {
+                MainView.this.updateFilter();
             }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                MainView.this.updateFilter();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                MainView.this.updateFilter();
+            }
+        });
+        // 大小写匹配
+        this.cbMatchCase = new JCheckBox("Match Case");
+        this.cbMatchCase.setSelected(UserDefault.getInstance().getValueForKey("MatchCase", false));
+        northSecond.add(cbMatchCase);
+        this.cbMatchCase.addActionListener(e -> {
+            UserDefault.getInstance().setValueForKey("MatchCase", ((JCheckBox) e.getSource()).isSelected());
+            this.updateFilter();
+        });
+        // 单词匹配
+        this.cbWords = new JCheckBox("Words");
+        this.cbWords.setSelected(UserDefault.getInstance().getValueForKey("Words", false));
+        northSecond.add(cbWords);
+        this.cbWords.addActionListener(e -> {
+            UserDefault.getInstance().setValueForKey("Words", ((JCheckBox) e.getSource()).isSelected());
+            this.updateFilter();
         });
         // 正则表达式
         this.cbRegex = new JCheckBox("Regex");
-        this.cbRegex.setSelected(UserDefault.getInstance().getValueForKey("regex", false));
-//        north.add(cbRegex);
-        this.cbRegex.addActionListener(e -> requestLogcat());
-
+        this.cbRegex.setSelected(UserDefault.getInstance().getValueForKey("Regex", false));
+        northSecond.add(cbRegex);
+        this.cbRegex.addActionListener(e -> {
+            UserDefault.getInstance().setValueForKey("Regex", ((JCheckBox) e.getSource()).isSelected());
+            this.updateFilter();
+        });
     }
 
     private void initCenter() {
@@ -294,7 +325,7 @@ public class MainView extends JFrame implements WindowListener {
         });
 
         // 底部按钮
-        MainView.isScrollBottom = UserDefault.getInstance().getValueForKey("isScrollBottom", true);
+        this.isScrollBottom = UserDefault.getInstance().getValueForKey("isScrollBottom", true);
         ImageIcon iconBottom = new ImageIcon(isScrollBottom ? "res/images/bottom_selected.png" : "res/images/bottom.png");
         JButton btnBottom = new JButton(iconBottom);
         btnBottom.setToolTipText("始终滚动到底部");
@@ -303,7 +334,7 @@ public class MainView extends JFrame implements WindowListener {
         btnBottom.addActionListener(e -> {
             this.isScrollBottom = !this.isScrollBottom;
             UserDefault.getInstance().setValueForKey("isScrollBottom", isScrollBottom);
-            btnBottom.setIcon(new ImageIcon(isScrollBottom ? "res/images/bottom_selected.png" : "res/images/bottom.png"));
+            btnBottom.setIcon(new ImageIcon(this.isScrollBottom ? "res/images/bottom_selected.png" : "res/images/bottom.png"));
         });
 
 
@@ -312,21 +343,13 @@ public class MainView extends JFrame implements WindowListener {
 //        this.tpLoggerContainor.setEditable(false);
 
         String[] titles = new String[]{"Level", "Time", "PID", "TID", "Tag", "Text"};
-        this.table = new StyleTable(titles);
+        this.filter = new Filter();
+        this.filter.setSearchFilter(new FilterSearch());
+        this.table = new StyleTable(this, this.filter, titles);
         // 中间
         this.spLoggerContainor = new JScrollPane(this.table);
         center.add(spLoggerContainor, BorderLayout.CENTER);
 
-        // 滚动到底部
-        this.spLoggerContainor.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
-            @Override
-            public void adjustmentValueChanged(AdjustmentEvent evt) {
-                if (evt.getAdjustmentType() == AdjustmentEvent.TRACK && isNeedBottom <= 3) {
-                    spLoggerContainor.getVerticalScrollBar().setValue(spLoggerContainor.getVerticalScrollBar().getModel().getMaximum() - spLoggerContainor.getVerticalScrollBar().getModel().getExtent());
-                    isNeedBottom++;
-                }
-            }
-        });
     }
 
 
@@ -403,6 +426,15 @@ public class MainView extends JFrame implements WindowListener {
 //            e1.printStackTrace();
 //        }
         this.table.removeAllItems();
+    }
+
+    private void updateFilter() {
+        filter.setLogType(this.cbLogLevels.getSelectedIndex());
+        filter.getSearchFilter().setContent(this.tfSearch.getText());
+        filter.getSearchFilter().setMatchCase(this.cbMatchCase.isSelected());
+        filter.getSearchFilter().setRegex(this.cbRegex.isSelected());
+        filter.getSearchFilter().setWords(this.cbWords.isSelected());
+        this.table.updatedFilter();
     }
 
     private void requestLogcat() {
@@ -504,5 +536,10 @@ public class MainView extends JFrame implements WindowListener {
     @Override
     public void windowDeactivated(WindowEvent e) {
 
+    }
+
+    public void tryScrollBottom() {
+        if (this.isScrollBottom)
+            this.spLoggerContainor.getVerticalScrollBar().setValue(this.spLoggerContainor.getVerticalScrollBar().getMaximum());
     }
 }

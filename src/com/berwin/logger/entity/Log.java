@@ -35,6 +35,7 @@ public class Log {
         log.setTag("ANDLogger");
         log.setText(text);
         log.setLevel(level);
+        log.setOriginText(String.format("%s  %d  %d  %s %s : %s", formatStr, log.getPid(), log.getTid(), log.getLevel(), log.getTag(), log.getText()));
         return log;
     }
 

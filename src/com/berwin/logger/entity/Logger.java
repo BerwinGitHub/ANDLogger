@@ -143,8 +143,8 @@ public class Logger {
         StyleConstants.setFontSize(attrSet, fontSize);
         //字体大小
         insert(str, attrSet);
-        if (MainView.isScrollBottom)
-            this.scrollPane.getVerticalScrollBar().setValue(this.scrollPane.getVerticalScrollBar().getMaximum());
+//        if (MainView.isScrollBottom)
+//            this.scrollPane.getVerticalScrollBar().setValue(this.scrollPane.getVerticalScrollBar().getMaximum());
     }
 
 }
