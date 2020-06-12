@@ -6,6 +6,7 @@ package com.berwin.logger.views.dialogs;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.utility.Utility;
 import com.berwin.logger.views.MainView;
+import com.berwin.logger.views.components.VerticalFlowLayout;
 
 import javax.swing.*;
 import java.awt.*;
@@ -23,33 +24,34 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
     private static final long serialVersionUID = 1L;
 
     private JTextField tfPRJRoot = new JTextField();
+    private JTextField tfCacheNum = null;
 
     public ConfigDialog() {
-        super(MainView.self, "ADB设置", 0.75f);
+        super(MainView.self, "常规配置", 0.75f);
 
         this.addWindowListener(this);
-        this.setLayout(new BorderLayout());
+        this.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
 
 
-        JPanel top = new JPanel();
-        top.setLayout(new BorderLayout());
-        this.add(top, BorderLayout.NORTH);
+        JPanel pnlFirst = new JPanel();
+        pnlFirst.setLayout(new BorderLayout());
+        this.add(pnlFirst);
 //        Border border = BorderFactory.createTitledBorder(
 //                BorderFactory.createLineBorder(Color.GRAY, 1), "项目根目录",
 //                TitledBorder.LEFT, TitledBorder.TOP);
 //        top.setBorder(border);
 
-        JButton btnOpenFolder = new JButton("打开");
-        top.add(btnOpenFolder, BorderLayout.WEST);
+        JButton btnOpenFolder = new JButton("打开ADB文件夹");
+        pnlFirst.add(btnOpenFolder, BorderLayout.WEST);
         btnOpenFolder.addActionListener(e -> Utility.openFolder(this.tfPRJRoot.getText()));
 
         this.tfPRJRoot = new JTextField();
         this.tfPRJRoot.setEditable(false);
         this.tfPRJRoot.setText(UserDefault.getInstance().getValueForKey("adb_path", ""));
-        top.add(this.tfPRJRoot, BorderLayout.CENTER);
+        pnlFirst.add(this.tfPRJRoot, BorderLayout.CENTER);
 
         JButton btnsSelectFolder = new JButton("浏览");
-        top.add(btnsSelectFolder, BorderLayout.EAST);
+        pnlFirst.add(btnsSelectFolder, BorderLayout.EAST);
         btnsSelectFolder.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setDialogTitle("ADB路径");
@@ -63,6 +65,17 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
                 UserDefault.getInstance().setValueForKey("adb_path", path);
             }
         });
+
+        JPanel pnlSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        this.add(pnlSecond);
+
+        JLabel lblCacheNum = new JLabel("日志缓存(行):");
+        pnlSecond.add(lblCacheNum);
+
+        tfCacheNum = new JTextField(30);
+        pnlSecond.add(tfCacheNum);
+        tfCacheNum.setText(UserDefault.getInstance().getValueForKey("cache_num", 10000) + "");
+
     }
 
     @Override
@@ -76,7 +89,14 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
 
     @Override
     public void windowClosed(WindowEvent e) {
-
+        try {
+            int cacheNum = Integer.parseInt(tfCacheNum.getText());
+            UserDefault.getInstance().setValueForKey("cache_num", cacheNum);
+            String adbPath = tfPRJRoot.getText();
+            MainView.self.updateConfig(adbPath, cacheNum);
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
     }
 
     @Override

@@ -41,34 +41,45 @@ public class Log {
 
     public static Log buildLogFromText(String txt) {
         Log log = new Log();
-        log.setOriginText(txt);
-        String str = new String(txt);
-        // 时间
-        Pattern pattern = Pattern.compile("\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}");
-        Matcher matcher = pattern.matcher(str);
-        if (!matcher.find()) {
-            return buildLogForText(txt, LEVEL_V);
+        try {
+            log.setOriginText(txt);
+            String str = new String(txt);
+            // 时间
+            Pattern pattern = Pattern.compile("\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}");
+            Matcher matcher = pattern.matcher(str);
+            if (!matcher.find()) {
+                return buildLogForText(txt, LEVEL_V);
+            }
+            log.setTime(matcher.group());
+            str = str.replace(log.getTime(), "").trim();
+            // pid
+            int p = str.indexOf(" ");
+            log.setPid(Integer.parseInt(str.substring(0, p)));
+            str = str.substring(p + 1).trim();
+            // tid
+            p = str.indexOf(" ");
+            log.setTid(Integer.parseInt(str.substring(0, p)));
+            str = str.substring(p + 1).trim();
+            // level
+            p = str.indexOf(" ");
+            log.setLevel(str.substring(0, p));
+            str = str.substring(p + 1).trim();
+            // tag
+            p = str.indexOf(":");
+            if (p > 0) {
+                log.setTag(str.substring(0, p - 1).trim());
+                str = str.substring(p + 1).trim();
+            } else {
+                if (p == 0)
+                    str = str.substring(1).trim();
+                log.setTag("");
+            }
+            // text
+            log.setText(str);
+        } catch (Exception e) {
+            System.out.println(txt);
+            e.printStackTrace();
         }
-        log.setTime(matcher.group());
-        str = str.replace(log.getTime(), "").trim();
-        // pid
-        int p = str.indexOf(" ");
-        log.setPid(Integer.parseInt(str.substring(0, p)));
-        str = str.substring(p + 1).trim();
-        // tid
-        p = str.indexOf(" ");
-        log.setTid(Integer.parseInt(str.substring(0, p)));
-        str = str.substring(p + 1).trim();
-        // level
-        p = str.indexOf(" ");
-        log.setLevel(str.substring(0, p));
-        str = str.substring(p + 1).trim();
-        // tag
-        p = str.indexOf(":");
-        log.setTag(str.substring(0, p - 1).trim());
-        str = str.substring(p + 1).trim();
-        // text
-        log.setText(str);
         return log;
     }
 

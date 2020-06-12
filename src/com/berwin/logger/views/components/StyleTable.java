@@ -3,6 +3,7 @@ package com.berwin.logger.views.components;
 import com.berwin.logger.entity.Filter;
 import com.berwin.logger.entity.Log;
 import com.berwin.logger.entity.LogType;
+import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.views.MainView;
 
 import javax.swing.*;
@@ -20,11 +21,14 @@ public class StyleTable extends JTable {
     private MainView mainView = null;
     private Filter filter = null;
 
+    private int maxLogRow = 10;
+
     public StyleTable(MainView frame, Filter filter, Object[] columnNames) {
         super();
         this.columnMaxWidths = new int[columnNames.length];
         for (int i = 0; i < this.columnMaxWidths.length; i++)
             this.columnMaxWidths[i] = 0;
+        this.maxLogRow = UserDefault.getInstance().getValueForKey("cache_num", 10000);
         this.mainView = frame;
         this.setFilter(filter);
         this.model = new DefaultTableModel(null, columnNames);
@@ -48,6 +52,7 @@ public class StyleTable extends JTable {
         if (this.filter.matched(log)) {
             this.logFilted.add(log);
             this.model.addRow(log.toRowData());
+            this.tryCheckLogOverflow();
             this.fitTableColumns();
             this.mainView.tryScrollBottom();
         }
@@ -65,6 +70,7 @@ public class StyleTable extends JTable {
                 this.fitTableColumns();
             }
         }
+        this.tryCheckLogOverflow();
         this.mainView.tryScrollBottom();
     }
 
@@ -130,6 +136,19 @@ public class StyleTable extends JTable {
 
     public void setFilter(Filter filter) {
         this.filter = filter;
+    }
+
+    public void updateConfig(int cacheNum) {
+        this.maxLogRow = cacheNum;
+        this.tryCheckLogOverflow();
+    }
+
+    // 检测日志是否已经溢出
+    private void tryCheckLogOverflow() {
+        while (this.logFilted.size() > this.maxLogRow) {
+            this.model.removeRow(0);
+            this.logFilted.remove(0);
+        }
     }
 
     /**

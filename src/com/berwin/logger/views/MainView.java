@@ -93,16 +93,17 @@ public class MainView extends JFrame implements WindowListener {
         this.initNorth();
         this.initCenter();
 
+        this.updateFilter();
+
         String adbPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         if (adbPath.equals("")) {
-            this.table.addLog(Log.buildLogForText("请在 [设置]-[ADB设置] 中选择adb.exe路径", Log.LEVEL_E));
+            this.table.addLog(Log.buildLogForText("请在 [设置]-[常规配置] 中选择adb.exe路径", Log.LEVEL_E));
+//            new ConfigDialog().setVisible(true);
         } else {
             this.requestDevices();
             this.requestPackages();
 //            this.requestLogcat();
         }
-
-        this.updateFilter();
     }
 
     private void initMenuBar() {
@@ -112,9 +113,11 @@ public class MainView extends JFrame implements WindowListener {
         JMenu settingMenu = new JMenu("设置");
         menuBar.add(settingMenu);
 
-        JMenuItem compileItem = new JMenuItem("ADB设置");
+        JMenuItem compileItem = new JMenuItem("常规配置");
         settingMenu.add(compileItem);
         compileItem.addActionListener(e -> new ConfigDialog().setVisible(true));
+
+        settingMenu.addSeparator();
 
         JMenuItem aboutItem = new JMenuItem("关于软件");
         settingMenu.add(aboutItem);
@@ -145,17 +148,24 @@ public class MainView extends JFrame implements WindowListener {
         cbPackages.addActionListener(e -> {
             this.requestLogcat();
         });
+        // 刷新设备
+        JButton btnRefresh = new JButton("刷新连接");
+        northFirst.add(btnRefresh);
+        btnRefresh.addActionListener(e -> {
+            this.requestDevices();
+            this.requestPackages();
+        });
+        JPanel northSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        north.add(northSecond);
         // log level
         this.cbLogLevels = new JComboBox(LogType.getLogTypes());
         this.cbLogLevels.setSelectedIndex(UserDefault.getInstance().getValueForKey("log_level", 0));
-        northFirst.add(cbLogLevels);
+        northSecond.add(cbLogLevels);
         this.cbLogLevels.addActionListener(e -> {
             UserDefault.getInstance().setValueForKey("log_level", this.cbLogLevels.getSelectedIndex());
 //            this.requestLogcat();
             this.updateFilter();
         });
-        JPanel northSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        north.add(northSecond);
         // 搜索框
         this.tfSearch = new JTextField(40);
         northSecond.add(tfSearch);
@@ -183,6 +193,11 @@ public class MainView extends JFrame implements WindowListener {
             public void changedUpdate(DocumentEvent e) {
                 MainView.this.updateFilter();
             }
+        });
+        JButton btnClear = new JButton("清除");
+        northSecond.add(btnClear);
+        btnClear.addActionListener(e -> {
+            tfSearch.setText("");
         });
         // 大小写匹配
         this.cbMatchCase = new JCheckBox("Match Case");
@@ -357,6 +372,11 @@ public class MainView extends JFrame implements WindowListener {
     private void requestDevices() {
         cbDevices.removeAllItems();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        if (cmdPath.equals("")) {
+            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
+            new ConfigDialog().setVisible(true);
+            return;
+        }
         new Command(new String[]{
 //                cmdPath + " devices -l",
                 cmdPath + " -d shell getprop ro.product.brand",
@@ -388,6 +408,11 @@ public class MainView extends JFrame implements WindowListener {
     private void requestPackages() {
         java.util.List<String> packageList = new ArrayList<String>();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        if (cmdPath.equals("")) {
+            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
+            new ConfigDialog().setVisible(true);
+            return;
+        }
         new Command(cmdPath + " shell pm list packages", new Command.CommandListenerAdapter() {
 
             @Override
@@ -440,6 +465,11 @@ public class MainView extends JFrame implements WindowListener {
     private void requestLogcat() {
         this.clearLogcat();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        if (cmdPath.equals("")) {
+            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
+            new ConfigDialog().setVisible(true);
+            return;
+        }
 //        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
         String packageName = (String) cbPackages.getSelectedItem();
 //        String search = tfSearch.getText().trim();
@@ -541,5 +571,15 @@ public class MainView extends JFrame implements WindowListener {
     public void tryScrollBottom() {
         if (this.isScrollBottom)
             this.spLoggerContainor.getVerticalScrollBar().setValue(this.spLoggerContainor.getVerticalScrollBar().getMaximum());
+    }
+
+    public void updateConfig(String adbPath, int cacheNum) {
+        this.table.updateConfig(cacheNum);
+        this.table.addLog(Log.buildLogForText("保存配置，ADB:" + adbPath, Log.LEVEL_V));
+        this.table.addLog(Log.buildLogForText("保存配置，缓存:" + cacheNum, Log.LEVEL_V));
+        if (this.cbDevices.getItemCount() <= 0 && !adbPath.equals("")) {
+            this.requestDevices();
+            this.requestPackages();
+        }
     }
 }
