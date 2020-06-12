@@ -476,7 +476,7 @@ public class MainView extends JFrame implements WindowListener {
         boolean isRegex = this.cbRegex.isSelected();
         String cmd;
         if (!packageName.equals("*")) {
-            cmd = String.format("%s logcat -v time | grep \"^%s\"", cmdPath, cbPackages.getSelectedItem());
+            cmd = String.format("%s logcat | grep \"^%s\"", cmdPath, cbPackages.getSelectedItem());
 //            if (search.equals("")) {
 //                cmd = String.format("%s logcat -v time | grep \"^%s.%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem());
 //            } else {
