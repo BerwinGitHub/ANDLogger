@@ -13,5 +13,10 @@ JAVA环境:
 
 > ./artifacts/ANDLogger_jar/ANDLogger.jar
 
-![preview](/Users/berwin/Documents/Workspace/Github/ANDLogger/preview.png)
 
+
+<img src="https://i.postimg.cc/3JX4jHCC/preview.jpg" alt="preview" style="zoom:100%;" />
+
+
+
+<img src="/Users/berwin/Documents/Workspace/Github/ANDLogger/preview.png" alt="preview" style="zoom:50%;" />
