@@ -161,7 +161,7 @@ public class StyleTable extends JTable {
         public Component getTableCellRendererComponent(JTable t, Object value,
                                                        boolean isSelected, boolean hasFocus, int row, int column) {
             String level = StyleTable.this.logFilted.get(row).getLevel();
-            this.setForeground(LogType.getColor(level));
+            this.setForeground(LogType.getColorByLevel(level));
             return super.getTableCellRendererComponent(t, value, isSelected,
                     hasFocus, row, column);
         }

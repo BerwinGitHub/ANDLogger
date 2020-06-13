@@ -25,7 +25,7 @@ public class Filter {
     }
 
     public boolean matched(Log log) {
-        int type = LogType.getType(log.getLevel());
+        int type = LogType.getTypeByLevel(log.getLevel());
         if (logType == LogType.VERBOSE || type == logType) {
             if (this.searchFilter.matched(log.getOriginText())) {
                 return true;

@@ -3,6 +3,8 @@
  */
 package com.berwin.logger.views.dialogs;
 
+import com.berwin.logger.entity.LogType;
+import com.berwin.logger.utility.ColorUtility;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.utility.Utility;
 import com.berwin.logger.views.MainView;
@@ -34,6 +36,7 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
 
 
         JPanel pnlFirst = new JPanel();
+        pnlFirst.setBorder(BorderFactory.createTitledBorder("ADB文件路径"));
         pnlFirst.setLayout(new BorderLayout());
         this.add(pnlFirst);
 //        Border border = BorderFactory.createTitledBorder(
@@ -41,7 +44,7 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
 //                TitledBorder.LEFT, TitledBorder.TOP);
 //        top.setBorder(border);
 
-        JButton btnOpenFolder = new JButton("打开ADB文件夹");
+        JButton btnOpenFolder = new JButton("打开");
         pnlFirst.add(btnOpenFolder, BorderLayout.WEST);
         btnOpenFolder.addActionListener(e -> Utility.openFolder(this.tfPRJRoot.getText()));
 
@@ -66,15 +69,43 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
             }
         });
 
-        JPanel pnlSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel pnlSecond = new JPanel(new BorderLayout());
+        pnlSecond.setBorder(BorderFactory.createTitledBorder("日志缓存(行)"));
         this.add(pnlSecond);
 
-        JLabel lblCacheNum = new JLabel("日志缓存(行):");
-        pnlSecond.add(lblCacheNum);
-
-        tfCacheNum = new JTextField(30);
-        pnlSecond.add(tfCacheNum);
+        tfCacheNum = new JTextField();
+        pnlSecond.add(tfCacheNum, BorderLayout.CENTER);
         tfCacheNum.setText(UserDefault.getInstance().getValueForKey("cache_num", 10000) + "");
+
+        JPanel pnlThird = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        pnlThird.setBorder(BorderFactory.createTitledBorder("日志颜色"));
+        this.add(pnlThird);
+
+        String[] names = LogType.getLogNames();
+        for (int i = 0; i < names.length; i++) {
+            String name = names[i];
+
+            JPanel pnlColor = new JPanel();
+            pnlColor.setPreferredSize(new Dimension(50, 20));
+            Color color = LogType.getColorByName(name);
+            pnlColor.setBackground(color);
+            pnlThird.add(pnlColor);
+            pnlColor.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    super.mouseClicked(e);
+                    if (e.getButton() == MouseEvent.BUTTON1) {
+                        Color newColor = JColorChooser.showDialog(ConfigDialog.this, name + " 颜色", color);
+                        if (newColor != null) {
+                            UserDefault.getInstance().setValueForKey("color_" + name, ColorUtility.colorToHex(newColor));
+                            LogType.setLogColor(name, newColor);
+                        }
+                    }
+                }
+            });
+
+            pnlThird.add(new JLabel(name + "      "));
+        }
 
     }
 

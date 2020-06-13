@@ -114,12 +114,16 @@ public class MainView extends JFrame implements WindowListener {
         menuBar.add(settingMenu);
 
         JMenuItem compileItem = new JMenuItem("常规配置");
+//        compileItem.setActionCommand(",");
+//        compileItem.setMnemonic(KeyEvent.CTRL_MASK | KeyEvent.VK_N);
+        compileItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, ActionEvent.META_MASK));
         settingMenu.add(compileItem);
         compileItem.addActionListener(e -> new ConfigDialog().setVisible(true));
 
         settingMenu.addSeparator();
 
         JMenuItem aboutItem = new JMenuItem("关于软件");
+        aboutItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.META_MASK));
         settingMenu.add(aboutItem);
         aboutItem.addActionListener(e -> {
             String name = "关于软件";
@@ -158,7 +162,7 @@ public class MainView extends JFrame implements WindowListener {
         JPanel northSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
         north.add(northSecond);
         // log level
-        this.cbLogLevels = new JComboBox(LogType.getLogTypes());
+        this.cbLogLevels = new JComboBox(LogType.getLogNames());
         this.cbLogLevels.setSelectedIndex(UserDefault.getInstance().getValueForKey("log_level", 0));
         northSecond.add(cbLogLevels);
         this.cbLogLevels.addActionListener(e -> {
