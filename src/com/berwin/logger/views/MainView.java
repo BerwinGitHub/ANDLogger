@@ -71,13 +71,12 @@ public class MainView extends JFrame implements WindowListener {
              * UIManager.setLookAndFeel(lookAndFeel);
              */
             if ("Mac OS X".equals(System.getProperties().getProperty("os.name"))) {
-                UIManager
-                        .setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
                 UIManager.put("Table.gridColor", new ColorUIResource(new Color(230, 230, 230)));
             } else {
 //                UIManager
 //                        .setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
             }
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }
