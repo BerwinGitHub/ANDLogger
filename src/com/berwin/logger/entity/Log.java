@@ -67,7 +67,7 @@ public class Log {
             // tag
             p = str.indexOf(":");
             if (p > 0) {
-                log.setTag(str.substring(0, p - 1).trim());
+                log.setTag(str.substring(0, p).trim());
                 str = str.substring(p + 1).trim();
             } else {
                 if (p == 0)

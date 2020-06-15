@@ -20,6 +20,7 @@ public class StyleTable extends JTable {
     private DefaultTableModel model = null;
     private MainView mainView = null;
     private Filter filter = null;
+    private RowSorter<DefaultTableModel> sorter = null;
 
     private int maxLogRow = 10;
 
@@ -36,8 +37,8 @@ public class StyleTable extends JTable {
         // 将奇偶行分别设置为不同颜色
         this.paintColorFont();
         // 通过点击表头来排序列中数据resort data by clicking table header
-        RowSorter<TableModel> sorter = new TableRowSorter<>(this.getModel());
-        this.setRowSorter(sorter);
+        this.sorter = new TableRowSorter<DefaultTableModel>((DefaultTableModel) this.getModel());
+        this.setRowSorter(this.sorter);
 
         // 设置数据与单元格边框的眉边距
 //        this.setIntercellSpacing(new Dimension(5, 5));

@@ -86,7 +86,7 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
             String name = names[i];
 
             JPanel pnlColor = new JPanel();
-            pnlColor.setPreferredSize(new Dimension(50, 20));
+            pnlColor.setPreferredSize(new Dimension(30, 30));
             Color color = LogType.getColorByName(name);
             pnlColor.setBackground(color);
             pnlThird.add(pnlColor);
@@ -97,6 +97,7 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
                     if (e.getButton() == MouseEvent.BUTTON1) {
                         Color newColor = JColorChooser.showDialog(ConfigDialog.this, name + " 颜色", color);
                         if (newColor != null) {
+                            pnlColor.setBackground(newColor);
                             UserDefault.getInstance().setValueForKey("color_" + name, ColorUtility.colorToHex(newColor));
                             LogType.setLogColor(name, newColor);
                         }
