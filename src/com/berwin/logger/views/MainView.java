@@ -405,6 +405,13 @@ public class MainView extends JFrame implements WindowListener {
             public void onError(String error) {
                 table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
             }
+
+            @Override
+            public void onFinished() {
+                super.onFinished();
+                table.addLog(Log.buildLogForText("设备列表加载完成", Log.LEVEL_I));
+
+            }
         }).startWithSynchronize();
     }
 
@@ -438,6 +445,7 @@ public class MainView extends JFrame implements WindowListener {
                 Collections.sort(packageList);
                 for (String pkg : packageList)
                     cbPackages.addItem(pkg);
+                table.addLog(Log.buildLogForText("应用列表加载完成", Log.LEVEL_I));
             }
         }).startWithSynchronize();
     }
@@ -467,6 +475,10 @@ public class MainView extends JFrame implements WindowListener {
     }
 
     private void requestLogcat() {
+        if (cbDevices.getItemCount() <= 0) {
+            this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
+            return;
+        }
         this.clearLogcat();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         if (cmdPath.equals("")) {
