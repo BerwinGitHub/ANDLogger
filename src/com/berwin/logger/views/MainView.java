@@ -43,7 +43,8 @@ public class MainView extends JFrame implements WindowListener {
 
     private boolean isScrollBottom = false;
 
-    private Command commond = null;
+    private Command command = null;
+    private boolean isADBRunning = false;
 
 
     public MainView() {
@@ -245,19 +246,39 @@ public class MainView extends JFrame implements WindowListener {
         btnStart.setPreferredSize(new Dimension(iconStart.getIconWidth() + 10, iconStart.getIconHeight() + 10));
         nEast.add(btnStart);
         btnStart.addActionListener(e -> {
-            String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
-            new Command(cmdPath + " start-server").start();
-            this.requestLogcat();
+            if (!this.isADBRunning) {
+                String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+                new Command(cmdPath + " start-server").start();
+                if (this.requestLogcat()) {
+                    btnStart.setIcon(new ImageIcon("res/images/stop.png"));
+                    this.isADBRunning = !this.isADBRunning;
+                }
+            } else {
+                if (this.command != null)
+                    this.command.stop();
+                btnStart.setIcon(new ImageIcon("res/images/start.png"));
+                this.isADBRunning = !this.isADBRunning;
+            }
         });
         // 關閉按钮
-        ImageIcon iconStop = new ImageIcon("res/images/stop.png");
-        JButton btnStop = new JButton(iconStop);
-        btnStop.setToolTipText("停止ADB");
-        btnStop.setPreferredSize(new Dimension(iconStart.getIconWidth() + 10, iconStart.getIconHeight() + 10));
-        nEast.add(btnStop);
-        btnStop.addActionListener(e -> {
-            if (this.commond != null)
-                this.commond.stop();
+//        ImageIcon iconStop = new ImageIcon("res/images/stop.png");
+//        JButton btnStop = new JButton(iconStop);
+//        btnStop.setToolTipText("停止ADB");
+//        btnStop.setPreferredSize(new Dimension(iconStart.getIconWidth() + 10, iconStart.getIconHeight() + 10));
+//        nEast.add(btnStop);
+//        btnStop.addActionListener(e -> {
+//            if (this.commond != null)
+//                this.commond.stop();
+//        });
+        // 删除按钮
+        ImageIcon iconDelete = new ImageIcon("res/images/delete.png");
+        JButton btnDelete = new JButton(iconDelete);
+        btnDelete.setToolTipText("清除日志");
+        btnDelete.setPreferredSize(new Dimension(iconDelete.getIconWidth() + 10, iconDelete.getIconHeight() + 10));
+        nEast.add(btnDelete);
+        btnDelete.addActionListener(e -> {
+            this.clearView();
+            this.clearLogcat();
         });
         // 刷新按钮
         ImageIcon iconRefresh = new ImageIcon("res/images/refresh.png");
@@ -330,16 +351,6 @@ public class MainView extends JFrame implements WindowListener {
                     }
                 }).start();
             }
-        });
-        // 删除按钮
-        ImageIcon iconDelete = new ImageIcon("res/images/delete.png");
-        JButton btnDelete = new JButton(iconDelete);
-        btnDelete.setToolTipText("清除日志");
-        btnDelete.setPreferredSize(new Dimension(iconDelete.getIconWidth() + 10, iconDelete.getIconHeight() + 10));
-        nEast.add(btnDelete);
-        btnDelete.addActionListener(e -> {
-            this.clearLogcat();
-            this.clearView();
         });
 
         // 底部按钮
@@ -449,9 +460,19 @@ public class MainView extends JFrame implements WindowListener {
         }).startWithSynchronize();
     }
 
-    private void clearLogcat() {
+    private boolean clearLogcat() {
+        if (cbDevices.getItemCount() <= 0) {
+            this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
+            return false;
+        }
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        if (cmdPath.equals("")) {
+            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
+            new ConfigDialog().setVisible(true);
+            return false;
+        }
         new Command(cmdPath + " logcat -c", null).startWithSynchronize();
+        return true;
     }
 
     private void clearView() {
@@ -473,17 +494,17 @@ public class MainView extends JFrame implements WindowListener {
         this.table.updatedFilter();
     }
 
-    private void requestLogcat() {
+    private boolean requestLogcat() {
         if (cbDevices.getItemCount() <= 0) {
             this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
-            return;
+            return false;
         }
         this.clearLogcat();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         if (cmdPath.equals("")) {
             this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
             new ConfigDialog().setVisible(true);
-            return;
+            return false;
         }
 //        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
         String packageName = (String) cbPackages.getSelectedItem();
@@ -506,9 +527,9 @@ public class MainView extends JFrame implements WindowListener {
 //            }
         }
 //            cmd = String.format("%s logcat -v time *:%s | grep \"%s\" & find \"%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), tfSearch.getText());
-        if (this.commond != null)
-            this.commond.stop();
-        this.commond = new Command(cmd, new Command.CommandListenerAdapter() {
+        if (this.command != null)
+            this.command.stop();
+        this.command = new Command(cmd, new Command.CommandListenerAdapter() {
             @Override
             public void onStart(String cmd) {
                 super.onStart(cmd);
@@ -527,7 +548,8 @@ public class MainView extends JFrame implements WindowListener {
                 table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
             }
         });
-        this.commond.start();
+        this.command.start();
+        return true;
     }
 
     public void find(String string) {
@@ -554,8 +576,8 @@ public class MainView extends JFrame implements WindowListener {
 
     @Override
     public void windowClosing(WindowEvent e) {
-        if (this.commond != null)
-            this.commond.stop();
+        if (this.command != null)
+            this.command.stop();
     }
 
     @Override
