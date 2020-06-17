@@ -16,6 +16,10 @@ import javax.swing.plaf.ColorUIResource;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -132,6 +136,25 @@ public class MainView extends JFrame implements WindowListener {
             String txt = name + "(" + version + ")" + "\r\n\r\n" + content;
             JOptionPane.showMessageDialog(MainView.this, txt, "",
                     JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        JMenuItem gitItem = new JMenuItem("开源地址");
+        gitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ActionEvent.META_MASK));
+        settingMenu.add(gitItem);
+        gitItem.addActionListener(e -> {
+            String url = "https://github.com/BerwinGitHub/ANDLogger";
+            this.table.addLog(Log.buildLogForText("开源地址:" + url, Log.LEVEL_I));
+            try {
+                URI u = URI.create(url);
+                Desktop desktop = Desktop.getDesktop();
+                if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                    desktop.browse(u);
+                }
+            } catch (MalformedURLException ex) {
+                ex.printStackTrace();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         });
     }
 
@@ -251,12 +274,14 @@ public class MainView extends JFrame implements WindowListener {
                 new Command(cmdPath + " start-server").start();
                 if (this.requestLogcat()) {
                     btnStart.setIcon(new ImageIcon("res/images/stop.png"));
+                    btnStart.setToolTipText("停止ADB");
                     this.isADBRunning = !this.isADBRunning;
                 }
             } else {
                 if (this.command != null)
                     this.command.stop();
                 btnStart.setIcon(new ImageIcon("res/images/start.png"));
+                btnStart.setToolTipText("启动ADB");
                 this.isADBRunning = !this.isADBRunning;
             }
         });

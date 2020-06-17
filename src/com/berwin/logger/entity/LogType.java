@@ -32,8 +32,8 @@ public class LogType {
     public static final String NAME_SILENT = "Silent";
 
     public static final Color COLOR_VERBOSE = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_VERBOSE, ColorUtility.colorToHex(new Color(64, 64, 64))));
-    public static final Color COLOR_DEBUG = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_DEBUG, ColorUtility.colorToHex(new Color(124, 174, 252))));
-    public static final Color COLOR_INFO = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_INFO, ColorUtility.colorToHex(new Color(110, 195, 46))));
+    public static final Color COLOR_DEBUG = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_DEBUG, ColorUtility.colorToHex(new Color(64, 64, 64))));
+    public static final Color COLOR_INFO = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_INFO, ColorUtility.colorToHex(new Color(64, 64, 64))));
     public static final Color COLOR_WARN = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_WARN, ColorUtility.colorToHex(new Color(189, 140, 23))));
     public static final Color COLOR_ERROR = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_ERROR, ColorUtility.colorToHex(new Color(200, 50, 0))));
     public static final Color COLOR_FATAL = ColorUtility.hexToColor(UserDefault.getInstance().getValueForKey("color_" + NAME_FATAL, ColorUtility.colorToHex(new Color(200, 0, 0))));
