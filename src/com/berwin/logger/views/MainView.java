@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 
 public class MainView extends JFrame implements WindowListener {
+    public static final String PKG_ANY = "*"; // 选择过滤任意包
     public static final boolean IS_WINDOWS = (System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1);
     public static MainView self = null;
     // 设备选择框
@@ -225,7 +226,7 @@ public class MainView extends JFrame implements WindowListener {
 //        northFirst.add(cbDevices);
 //        this.cbPackages = new JComboBox<String>();
 //        northFirst.add(cbPackages);
-//        cbPackages.addItem("*");
+//        cbPackages.addItem(MainView.PKG_ANY);
 //        cbPackages.addActionListener(e -> {
 //            this.requestLogcat();
 //        });
@@ -531,15 +532,20 @@ public class MainView extends JFrame implements WindowListener {
             @Override
             public void onFinished(List<String> result) {
                 super.onFinished(result);
-                if (result.size() <= 0)
+                if (result.size() <= 0) {
+                    table.addLog(Log.buildLogForText("无设备数据", Log.LEVEL_E));
                     return;
+                }
                 deviceList.clear();
                 for (int i = 0; i < result.size(); i += commands.length) {
-                    deviceList.add(String.format("%s %s %s %s", result.get(i), result.get(i + 1), result.get(i + 2), result.get(i + 3)));
+                    String text = String.format("%s %s %s %s", result.get(i), result.get(i + 1), result.get(i + 2), result.get(i + 3)).trim();
+                    if (!text.equals(""))
+                        deviceList.add(text);
                 }
                 devicesMenu.setText(String.format("设备(%d)", deviceList.size()));
-                devicesMenu.getItem(0).setText(deviceList.get(0));
-                table.addLog(Log.buildLogForText("设备列表加载完成", Log.LEVEL_I));
+                if (deviceList.size() > 0)
+                    devicesMenu.getItem(0).setText(deviceList.get(0));
+                table.addLog(Log.buildLogForText("设备列表加载完成:" + deviceList.size(), Log.LEVEL_I));
             }
         }).startWithSynchronize();
     }
@@ -572,50 +578,16 @@ public class MainView extends JFrame implements WindowListener {
             public void onFinished(List<String> result) {
                 super.onFinished(result);
                 Collections.sort(packageList);
-                packageList.add(0, "*");
-                packagesMenu.setText(String.format("包名(%d)", packageList.size()));
+                packageList.add(0, MainView.PKG_ANY);
+                packagesMenu.setText(String.format("包名(%d)", packageList.size() - 1));
                 packagesMenu.getItem(0).setText(packageList.get(0));
-                table.addLog(Log.buildLogForText("应用列表加载完成", Log.LEVEL_I));
+                table.addLog(Log.buildLogForText("应用列表加载完成:" + (packageList.size() - 1), Log.LEVEL_I));
             }
         }).startWithSynchronize();
     }
 
-    private boolean clearLogcat() {
-        if (devicesMenu.getItemCount() <= 0) {
-            this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
-            return false;
-        }
-        String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
-        if (cmdPath.equals("")) {
-            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
-            new ConfigDialog().setVisible(true);
-            return false;
-        }
-        new Command(cmdPath + " logcat -c", null).startWithSynchronize();
-        return true;
-    }
-
-    private void clearView() {
-//        Document doc = this.tpLoggerContainor.getDocument();
-//        try {
-//            doc.remove(0, doc.getLength());
-//        } catch (BadLocationException e1) {
-//            e1.printStackTrace();
-//        }
-        this.table.removeAllItems();
-    }
-
-    private void updateFilter() {
-        filter.setLogType(this.cbLogLevels.getSelectedIndex());
-        filter.getSearchFilter().setContent(this.tfSearch.getText());
-        filter.getSearchFilter().setMatchCase(this.cbMatchCase.isSelected());
-        filter.getSearchFilter().setRegex(this.cbRegex.isSelected());
-        filter.getSearchFilter().setWords(this.cbWords.isSelected());
-        this.table.updatedFilter();
-    }
-
     private boolean requestLogcat() {
-        if (devicesMenu.getItemCount() <= 0) {
+        if (deviceList.size() <= 0) {
             this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
             return false;
         }
@@ -640,7 +612,7 @@ public class MainView extends JFrame implements WindowListener {
 //        String search = tfSearch.getText().trim();
         boolean isRegex = this.cbRegex.isSelected();
         String cmd;
-        if (!packageName.equals("*")) {
+        if (!packageName.equals(MainView.PKG_ANY)) {
             cmd = String.format("%s logcat | grep \"^%s\"", cmdPath, selectedDevice);
 //            if (search.equals("")) {
 //                cmd = String.format("%s logcat -v time | grep \"^%s.%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem());
@@ -679,6 +651,34 @@ public class MainView extends JFrame implements WindowListener {
         });
         this.command.start();
         return true;
+    }
+
+    private boolean clearLogcat() {
+        if (deviceList.size() <= 0) {
+            this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
+            return false;
+        }
+        String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        if (cmdPath.equals("")) {
+            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
+            new ConfigDialog().setVisible(true);
+            return false;
+        }
+        new Command(cmdPath + " logcat -c", null).startWithSynchronize();
+        return true;
+    }
+
+    private void clearView() {
+        this.table.removeAllItems();
+    }
+
+    private void updateFilter() {
+        filter.setLogType(this.cbLogLevels.getSelectedIndex());
+        filter.getSearchFilter().setContent(this.tfSearch.getText());
+        filter.getSearchFilter().setMatchCase(this.cbMatchCase.isSelected());
+        filter.getSearchFilter().setRegex(this.cbRegex.isSelected());
+        filter.getSearchFilter().setWords(this.cbWords.isSelected());
+        this.table.updatedFilter();
     }
 
     public void find(String string) {
@@ -743,7 +743,7 @@ public class MainView extends JFrame implements WindowListener {
         this.table.updateConfig(cacheNum);
         this.table.addLog(Log.buildLogForText("保存配置，ADB:" + adbPath, Log.LEVEL_V));
         this.table.addLog(Log.buildLogForText("保存配置，缓存:" + cacheNum, Log.LEVEL_V));
-        if (this.devicesMenu.getItemCount() <= 0 && !adbPath.equals("")) {
+        if (this.deviceList.size() <= 0 && !adbPath.equals("")) {
             this.requestDevices();
             this.requestPackages();
         }
