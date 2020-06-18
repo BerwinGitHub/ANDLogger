@@ -359,6 +359,7 @@ public class MainView extends JFrame implements WindowListener {
         btnDelete.addActionListener(e -> {
             this.clearView();
             this.clearLogcat();
+            this.updateLogLines();
         });
         // 刷新按钮
         ImageIcon iconRefresh = new ImageIcon("res/images/refresh.png");
