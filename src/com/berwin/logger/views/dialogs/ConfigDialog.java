@@ -34,40 +34,8 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
         this.addWindowListener(this);
         this.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
 
-
-        JPanel pnlFirst = new JPanel();
-        pnlFirst.setBorder(BorderFactory.createTitledBorder("ADB文件路径"));
-        pnlFirst.setLayout(new BorderLayout());
-        this.add(pnlFirst);
-//        Border border = BorderFactory.createTitledBorder(
-//                BorderFactory.createLineBorder(Color.GRAY, 1), "项目根目录",
-//                TitledBorder.LEFT, TitledBorder.TOP);
-//        top.setBorder(border);
-
-        JButton btnOpenFolder = new JButton("打开");
-        pnlFirst.add(btnOpenFolder, BorderLayout.WEST);
-        btnOpenFolder.addActionListener(e -> Utility.openFolder(this.tfPRJRoot.getText()));
-
-        this.tfPRJRoot = new JTextField();
-        this.tfPRJRoot.setEditable(false);
-        this.tfPRJRoot.setText(UserDefault.getInstance().getValueForKey("adb_path", ""));
-        pnlFirst.add(this.tfPRJRoot, BorderLayout.CENTER);
-
-        JButton btnsSelectFolder = new JButton("浏览");
-        pnlFirst.add(btnsSelectFolder, BorderLayout.EAST);
-        btnsSelectFolder.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("ADB路径");
-            fileChooser.setCurrentDirectory(new File(
-                    tfPRJRoot.getText()));
-            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-            int result = fileChooser.showDialog(this, "确认");
-            if (JFileChooser.APPROVE_OPTION == result) {
-                String path = fileChooser.getSelectedFile().getPath();
-                tfPRJRoot.setText(path);
-                UserDefault.getInstance().setValueForKey("adb_path", path);
-            }
-        });
+        this.add(this.initADBBrowser());
+        this.add(this.initExportBrowser());
 
         JPanel pnlSecond = new JPanel(new BorderLayout());
         pnlSecond.setBorder(BorderFactory.createTitledBorder("日志缓存(行)"));
@@ -108,6 +76,70 @@ public class ConfigDialog extends BaseDialog implements WindowListener {
             pnlThird.add(new JLabel(name + "      "));
         }
 
+    }
+
+    private JPanel initADBBrowser() {
+        JPanel pnlFirst = new JPanel();
+        pnlFirst.setBorder(BorderFactory.createTitledBorder("ADB文件路径"));
+        pnlFirst.setLayout(new BorderLayout());
+
+        JButton btnOpenFolder = new JButton("打开");
+        pnlFirst.add(btnOpenFolder, BorderLayout.WEST);
+        btnOpenFolder.addActionListener(e -> Utility.openFolder(this.tfPRJRoot.getText()));
+
+        this.tfPRJRoot = new JTextField();
+        this.tfPRJRoot.setEditable(false);
+        this.tfPRJRoot.setText(UserDefault.getInstance().getValueForKey("adb_path", ""));
+        pnlFirst.add(this.tfPRJRoot, BorderLayout.CENTER);
+
+        JButton btnSelectFolder = new JButton("浏览");
+        pnlFirst.add(btnSelectFolder, BorderLayout.EAST);
+        btnSelectFolder.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("ADB路径");
+            fileChooser.setCurrentDirectory(new File(
+                    tfPRJRoot.getText()));
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            int result = fileChooser.showDialog(this, "确认");
+            if (JFileChooser.APPROVE_OPTION == result) {
+                String path = fileChooser.getSelectedFile().getPath();
+                tfPRJRoot.setText(path);
+                UserDefault.getInstance().setValueForKey("adb_path", path);
+            }
+        });
+        return pnlFirst;
+    }
+
+    private JPanel initExportBrowser() {
+        JPanel pnlFirst = new JPanel();
+        pnlFirst.setBorder(BorderFactory.createTitledBorder("日志导出路径"));
+        pnlFirst.setLayout(new BorderLayout());
+
+        JTextField tfBrowser = new JTextField();
+        tfBrowser.setEditable(false);
+        tfBrowser.setText(UserDefault.getInstance().getValueForKey("save_path", ""));
+        pnlFirst.add(tfBrowser, BorderLayout.CENTER);
+
+        JButton btnOpenFolder = new JButton("打开");
+        pnlFirst.add(btnOpenFolder, BorderLayout.WEST);
+        btnOpenFolder.addActionListener(e -> Utility.openFolder(tfBrowser.getText()));
+
+        JButton btnSelectFolder = new JButton("浏览");
+        pnlFirst.add(btnSelectFolder, BorderLayout.EAST);
+        btnSelectFolder.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("日志保存路径");
+            fileChooser.setCurrentDirectory(new File(
+                    tfBrowser.getText()));
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int result = fileChooser.showDialog(this, "确认");
+            if (JFileChooser.APPROVE_OPTION == result) {
+                String path = fileChooser.getSelectedFile().getPath();
+                tfBrowser.setText(path);
+                UserDefault.getInstance().setValueForKey("save_path", path);
+            }
+        });
+        return pnlFirst;
     }
 
     @Override

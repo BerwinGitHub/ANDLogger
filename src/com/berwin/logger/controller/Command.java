@@ -5,7 +5,9 @@ import com.berwin.logger.views.MainView;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class Command implements Runnable {
 
@@ -18,7 +20,7 @@ public class Command implements Runnable {
 
         void onMessage(String content);
 
-        void onFinished();
+        void onFinished(List<String> result);
 
         void onError(String error);
     }
@@ -35,7 +37,7 @@ public class Command implements Runnable {
         }
 
         @Override
-        public void onFinished() {
+        public void onFinished(List<String> result) {
 
         }
 
@@ -103,9 +105,10 @@ public class Command implements Runnable {
 //            e.printStackTrace();
 //            System.out.println(e.getMessage());
 //        }
-
+        List<String> result = new ArrayList<>();
         for (String command : this.commands) {
             BufferedReader reader = null;
+            String buffer = "";
             try {
                 while (true) {
                     if (this.listener != null)
@@ -114,14 +117,17 @@ public class Command implements Runnable {
                     reader = new BufferedReader(new InputStreamReader(process.getInputStream(), MainView.IS_WINDOWS ? "GBK" : "UTF-8"));
                     String line;
                     while (this.isRunning && (line = reader.readLine()) != null)
-                        if (this.listener != null)
+                        if (this.listener != null) {
                             this.listener.onMessage(line);
+                            buffer = line == null ? "" : line;
+                        }
                     if (!this.isRunning)
                         break;
                     process.waitFor();
                     // 阻塞等待
                     break;
                 }
+                result.add(buffer);
             } catch (Exception e) {
                 this.isRunning = false;
                 e.printStackTrace();
@@ -136,7 +142,7 @@ public class Command implements Runnable {
             }
         }
         if (this.listener != null)
-            this.listener.onFinished();
+            this.listener.onFinished(result);
     }
 
     public static void main(String[] args) {

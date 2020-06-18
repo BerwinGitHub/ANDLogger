@@ -20,7 +20,7 @@ public class StyleTable extends JTable {
     private DefaultTableModel model = null;
     private MainView mainView = null;
     private Filter filter = null;
-    private RowSorter<DefaultTableModel> sorter = null;
+//    private RowSorter<DefaultTableModel> sorter = null;
 
     private int maxLogRow = 10;
 
@@ -37,8 +37,8 @@ public class StyleTable extends JTable {
         // 将奇偶行分别设置为不同颜色
         this.paintColorFont();
         // 通过点击表头来排序列中数据resort data by clicking table header
-        this.sorter = new TableRowSorter<DefaultTableModel>((DefaultTableModel) this.getModel());
-        this.setRowSorter(this.sorter);
+//        this.sorter = new TableRowSorter<DefaultTableModel>((DefaultTableModel) this.getModel());
+//        this.setRowSorter(this.sorter);
 
         // 设置数据与单元格边框的眉边距
 //        this.setIntercellSpacing(new Dimension(5, 5));
@@ -53,6 +53,7 @@ public class StyleTable extends JTable {
         if (this.filter.matched(log)) {
             this.logFilted.add(log);
             this.model.addRow(log.toRowData());
+            this.mainView.updateLogLines();
             this.tryCheckLogOverflow();
             this.fitTableColumns();
             this.mainView.tryScrollBottom();
@@ -68,6 +69,7 @@ public class StyleTable extends JTable {
             if (this.filter.matched(log)) {
                 this.logFilted.add(log);
                 this.model.addRow(log.toRowData());
+                this.mainView.updateLogLines();
                 this.fitTableColumns();
             }
         }
@@ -81,6 +83,13 @@ public class StyleTable extends JTable {
         }
         this.logAll.clear();
         this.logFilted.clear();
+    }
+
+    public String toLogString() {
+        String result = "";
+        for (Log log : this.logAll)
+            result += log.getOriginText() + "\r\n";
+        return result;
     }
 
     /**
@@ -150,6 +159,18 @@ public class StyleTable extends JTable {
             this.model.removeRow(0);
             this.logFilted.remove(0);
         }
+    }
+
+    public int getAllLines() {
+        return this.logAll.size();
+    }
+
+    public int getMaxLines() {
+        return this.maxLogRow;
+    }
+
+    public int getShowLines() {
+        return this.logFilted.size();
     }
 
     /**

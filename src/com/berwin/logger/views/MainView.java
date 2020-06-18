@@ -2,11 +2,13 @@ package com.berwin.logger.views;
 
 import com.berwin.logger.controller.Command;
 import com.berwin.logger.entity.*;
+import com.berwin.logger.utility.FileUtility;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.utility.Utility;
 import com.berwin.logger.views.components.StyleTable;
 import com.berwin.logger.views.components.VerticalFlowLayout;
 import com.berwin.logger.views.dialogs.ConfigDialog;
+import com.berwin.logger.views.dialogs.SelectedDialog;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -19,17 +21,23 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 public class MainView extends JFrame implements WindowListener {
     public static final boolean IS_WINDOWS = (System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1);
     public static MainView self = null;
     // 设备选择框
-    private JComboBox<String> cbDevices = null;
+//    private JComboBox<String> cbDevices = null;
+    private JMenu devicesMenu = null;
+    private List<String> deviceList = null;
     // package 选择
-    private JComboBox<String> cbPackages = null;
+//    private JComboBox<String> cbPackages = null;
+    private JMenu packagesMenu = null;
+    private List<String> packageList = null;
     // log level
     private JComboBox<String> cbLogLevels = null;
     // 搜索框
@@ -44,6 +52,8 @@ public class MainView extends JFrame implements WindowListener {
     //    private JTextPane tpLoggerContainor = null;
     //
     private StyleTable table = null;
+
+    private JLabel lblLogLines = null;
 
     private boolean isScrollBottom = false;
 
@@ -156,6 +166,52 @@ public class MainView extends JFrame implements WindowListener {
                 ex.printStackTrace();
             }
         });
+
+        // 设备
+        devicesMenu = new JMenu("设备(0)");
+        menuBar.add(devicesMenu);
+        deviceList = new ArrayList<>();
+
+        JRadioButtonMenuItem deviceSelectedItem = new JRadioButtonMenuItem("无设备", true);
+        deviceSelectedItem.setEnabled(false);
+        devicesMenu.add(deviceSelectedItem);
+
+        devicesMenu.addSeparator();
+
+        JMenuItem deviceSelectItem = new JMenuItem("选择设备...");
+        devicesMenu.add(deviceSelectItem);
+        deviceSelectItem.addActionListener(e -> {
+            new SelectedDialog(this.deviceList, deviceSelectedItem.getText(), e1 -> {
+                if (e1.getStateChange() == ItemEvent.SELECTED) {
+                    String text = (String) e1.getItem();
+                    deviceSelectedItem.setText(text);
+                    MainView.this.table.addLog(Log.buildLogForText("选择设备:" + text, Log.LEVEL_I));
+                }
+            }).setVisible(true);
+        });
+
+        // 包名
+        packagesMenu = new JMenu("包名(0)");
+        menuBar.add(packagesMenu);
+        packageList = new ArrayList<>();
+
+        JRadioButtonMenuItem packageSelectedItem = new JRadioButtonMenuItem("无包名", true);
+        packageSelectedItem.setEnabled(false);
+        packagesMenu.add(packageSelectedItem);
+
+        packagesMenu.addSeparator();
+
+        JMenuItem packageSelectItem = new JMenuItem("选择包名...");
+        packagesMenu.add(packageSelectItem);
+        packageSelectItem.addActionListener(e -> {
+            new SelectedDialog(this.packageList, packageSelectedItem.getText(), e1 -> {
+                if (e1.getStateChange() == ItemEvent.SELECTED) {
+                    String text = (String) e1.getItem();
+                    packageSelectedItem.setText(text);
+                    MainView.this.table.addLog(Log.buildLogForText("选择包名:" + text, Log.LEVEL_I));
+                }
+            }).setVisible(true);
+        });
     }
 
     private void initNorth() {
@@ -163,27 +219,25 @@ public class MainView extends JFrame implements WindowListener {
         north.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
         this.add(north, BorderLayout.NORTH);
 
-        JPanel northFirst = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        north.add(northFirst);
-        // 设备选择框 new String[]{"Xiaomi MI 4LTE Android 6.0.1, API 23", "Meizu NOTE 3 Android 7.0.1, API 25"}
-        this.cbDevices = new JComboBox<String>();
-        northFirst.add(cbDevices);
-        // package 选择 new String[]{"com.google.googleplay", "com.berwin.lessmore"}
-        this.cbPackages = new JComboBox<String>();
-        northFirst.add(cbPackages);
-        cbPackages.addItem("*");
-        cbPackages.addActionListener(e -> {
-            this.requestLogcat();
-        });
+//        JPanel northFirst = new JPanel(new FlowLayout(FlowLayout.LEFT));
+//        north.add(northFirst);
+//        this.cbDevices = new JComboBox<String>();
+//        northFirst.add(cbDevices);
+//        this.cbPackages = new JComboBox<String>();
+//        northFirst.add(cbPackages);
+//        cbPackages.addItem("*");
+//        cbPackages.addActionListener(e -> {
+//            this.requestLogcat();
+//        });
+        JPanel northSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        north.add(northSecond);
         // 刷新设备
-        JButton btnRefresh = new JButton("刷新连接");
-        northFirst.add(btnRefresh);
+        JButton btnRefresh = new JButton("刷新设备");
+        northSecond.add(btnRefresh);
         btnRefresh.addActionListener(e -> {
             this.requestDevices();
             this.requestPackages();
         });
-        JPanel northSecond = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        north.add(northSecond);
         // log level
         this.cbLogLevels = new JComboBox(LogType.getLogNames());
         this.cbLogLevels.setSelectedIndex(UserDefault.getInstance().getValueForKey("log_level", 0));
@@ -363,8 +417,8 @@ public class MainView extends JFrame implements WindowListener {
                     }
 
                     @Override
-                    public void onFinished() {
-                        super.onFinished();
+                    public void onFinished(List<String> result) {
+                        super.onFinished(result);
                         table.addLog(Log.buildLogForText("安装完成", Log.LEVEL_I));
                     }
 
@@ -376,6 +430,36 @@ public class MainView extends JFrame implements WindowListener {
                     }
                 }).start();
             }
+        });
+
+        ImageIcon iconSave = new ImageIcon("res/images/save.png");
+        JButton btnSave = new JButton(iconSave);
+        btnSave.setToolTipText("保存日志");
+        btnSave.setPreferredSize(new Dimension(iconDelete.getIconWidth() + 10, iconDelete.getIconHeight() + 10));
+        nEast.add(btnSave);
+        btnSave.addActionListener(e -> {
+            String path = UserDefault.getInstance().getValueForKey("save_path", "");
+            if (path.equals("")) {
+                this.table.addLog(Log.buildLogForText("请在 [设置]-[常规配置] 中选择导出文件夹", Log.LEVEL_E));
+                return;
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH_mm_ss");
+            String filename = String.format("%s.log", sdf.format(new Date()));
+            // 保存日志
+            new Thread(() -> {
+                String file = String.format("%s/%s", path, filename);
+                boolean result = FileUtility.saveToFile(file, this.table.toLogString());
+                if (!result) {
+                    this.table.addLog(Log.buildLogForText("导出失败:" + file, Log.LEVEL_E));
+                } else {
+                    this.table.addLog(Log.buildLogForText("导出成功:" + file, Log.LEVEL_I));
+                    try {
+                        Desktop.getDesktop().open(new File(path));
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }).start();
         });
 
         // 底部按钮
@@ -397,43 +481,46 @@ public class MainView extends JFrame implements WindowListener {
 //        this.tpLoggerContainor.setEditable(false);
 
         String[] titles = new String[]{"Level", "Time", "PID", "TID", "Tag", "Text"};
+        JPanel centerCenter = new JPanel();
+        centerCenter.setLayout(new BorderLayout());
+        center.add(centerCenter, BorderLayout.CENTER);
+
         this.filter = new Filter();
         this.filter.setSearchFilter(new FilterSearch());
         this.table = new StyleTable(this, this.filter, titles);
         // 中间
         this.spLoggerContainor = new JScrollPane(this.table);
-        center.add(spLoggerContainor, BorderLayout.CENTER);
+        centerCenter.add(spLoggerContainor, BorderLayout.CENTER);
 
+        JPanel centerSouth = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        centerCenter.add(centerSouth, BorderLayout.SOUTH);
+
+        lblLogLines = new JLabel(this.table.getShowLines() + "/" + this.table.getAllLines() + "/" + this.table.getMaxLines());
+        lblLogLines.setForeground(Color.GRAY);
+        centerSouth.add(lblLogLines);
     }
 
 
     // 請求連接的設備
     private void requestDevices() {
-        cbDevices.removeAllItems();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         if (cmdPath.equals("")) {
             this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
             new ConfigDialog().setVisible(true);
             return;
         }
-        new Command(new String[]{
-//                cmdPath + " devices -l",
+        String[] commands = {
                 cmdPath + " -d shell getprop ro.product.brand",
                 cmdPath + " shell getprop ro.product.model",
                 cmdPath + " shell getprop ro.build.version.release",
                 cmdPath + " shell getprop ro.build.version.sdk",
-        }, new Command.CommandListenerAdapter() {
+        };
+        new Command(commands, new Command.CommandListenerAdapter() {
 
             @Override
             public void onMessage(String content) {
                 if ("".equals(content))
                     return;
-                String item = cbDevices.getItemAt(0);
-                item = item == null ? "" : item;
-                item += " " + content;
-                cbDevices.removeAllItems();
-                cbDevices.addItem(item);
-//                logger(content).info();
             }
 
             @Override
@@ -442,23 +529,30 @@ public class MainView extends JFrame implements WindowListener {
             }
 
             @Override
-            public void onFinished() {
-                super.onFinished();
+            public void onFinished(List<String> result) {
+                super.onFinished(result);
+                if (result.size() <= 0)
+                    return;
+                deviceList.clear();
+                for (int i = 0; i < result.size(); i += commands.length) {
+                    deviceList.add(String.format("%s %s %s %s", result.get(i), result.get(i + 1), result.get(i + 2), result.get(i + 3)));
+                }
+                devicesMenu.setText(String.format("设备(%d)", deviceList.size()));
+                devicesMenu.getItem(0).setText(deviceList.get(0));
                 table.addLog(Log.buildLogForText("设备列表加载完成", Log.LEVEL_I));
-
             }
         }).startWithSynchronize();
     }
 
     // 請求連接的設備
     private void requestPackages() {
-        java.util.List<String> packageList = new ArrayList<String>();
         String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
         if (cmdPath.equals("")) {
             this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
             new ConfigDialog().setVisible(true);
             return;
         }
+        packageList.clear();
         new Command(cmdPath + " shell pm list packages", new Command.CommandListenerAdapter() {
 
             @Override
@@ -475,18 +569,19 @@ public class MainView extends JFrame implements WindowListener {
             }
 
             @Override
-            public void onFinished() {
-                super.onFinished();
+            public void onFinished(List<String> result) {
+                super.onFinished(result);
                 Collections.sort(packageList);
-                for (String pkg : packageList)
-                    cbPackages.addItem(pkg);
+                packageList.add(0, "*");
+                packagesMenu.setText(String.format("包名(%d)", packageList.size()));
+                packagesMenu.getItem(0).setText(packageList.get(0));
                 table.addLog(Log.buildLogForText("应用列表加载完成", Log.LEVEL_I));
             }
         }).startWithSynchronize();
     }
 
     private boolean clearLogcat() {
-        if (cbDevices.getItemCount() <= 0) {
+        if (devicesMenu.getItemCount() <= 0) {
             this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
             return false;
         }
@@ -520,8 +615,13 @@ public class MainView extends JFrame implements WindowListener {
     }
 
     private boolean requestLogcat() {
-        if (cbDevices.getItemCount() <= 0) {
+        if (devicesMenu.getItemCount() <= 0) {
             this.table.addLog(Log.buildLogForText("没有设备信息", Log.LEVEL_E));
+            return false;
+        }
+        String selectedDevice = this.getMenuSelected(devicesMenu);
+        if (selectedDevice == null) {
+            this.table.addLog(Log.buildLogForText("请在菜单栏选择一个设备", Log.LEVEL_E));
             return false;
         }
         this.clearLogcat();
@@ -532,12 +632,16 @@ public class MainView extends JFrame implements WindowListener {
             return false;
         }
 //        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
-        String packageName = (String) cbPackages.getSelectedItem();
+        String packageName = this.getMenuSelected(packagesMenu);
+        if (packageName == null) {
+            this.table.addLog(Log.buildLogForText("请在菜单栏选择一个应用包名", Log.LEVEL_E));
+            return false;
+        }
 //        String search = tfSearch.getText().trim();
         boolean isRegex = this.cbRegex.isSelected();
         String cmd;
         if (!packageName.equals("*")) {
-            cmd = String.format("%s logcat | grep \"^%s\"", cmdPath, cbPackages.getSelectedItem());
+            cmd = String.format("%s logcat | grep \"^%s\"", cmdPath, selectedDevice);
 //            if (search.equals("")) {
 //                cmd = String.format("%s logcat -v time | grep \"^%s.%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem());
 //            } else {
@@ -639,9 +743,23 @@ public class MainView extends JFrame implements WindowListener {
         this.table.updateConfig(cacheNum);
         this.table.addLog(Log.buildLogForText("保存配置，ADB:" + adbPath, Log.LEVEL_V));
         this.table.addLog(Log.buildLogForText("保存配置，缓存:" + cacheNum, Log.LEVEL_V));
-        if (this.cbDevices.getItemCount() <= 0 && !adbPath.equals("")) {
+        if (this.devicesMenu.getItemCount() <= 0 && !adbPath.equals("")) {
             this.requestDevices();
             this.requestPackages();
         }
+    }
+
+    public void updateLogLines() {
+        this.lblLogLines.setText(this.table.getShowLines() + "/" + this.table.getAllLines() + "/" + this.table.getMaxLines());
+    }
+
+    private String getMenuSelected(JMenu menu) {
+        for (int i = 0; i < menu.getItemCount(); i++) {
+            JRadioButtonMenuItem item = (JRadioButtonMenuItem) menu.getItem(i);
+            if (item.isSelected()) {
+                return item.getText();
+            }
+        }
+        return null;
     }
 }
