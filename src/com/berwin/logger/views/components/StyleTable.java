@@ -53,11 +53,11 @@ public class StyleTable extends JTable {
         if (this.filter.matched(log)) {
             this.logFilted.add(log);
             this.model.addRow(log.toRowData());
-            this.mainView.updateLogLines();
             this.tryCheckLogOverflow();
             this.fitTableColumns();
             this.mainView.tryScrollBottom();
         }
+        this.mainView.updateLogLines();
     }
 
     public void updatedFilter() {
@@ -69,10 +69,10 @@ public class StyleTable extends JTable {
             if (this.filter.matched(log)) {
                 this.logFilted.add(log);
                 this.model.addRow(log.toRowData());
-                this.mainView.updateLogLines();
                 this.fitTableColumns();
             }
         }
+        this.mainView.updateLogLines();
         this.tryCheckLogOverflow();
         this.mainView.tryScrollBottom();
     }
