@@ -159,6 +159,9 @@ public class StyleTable extends JTable {
             this.model.removeRow(0);
             this.logFilted.remove(0);
         }
+        while (this.logAll.size() > this.maxLogRow) {
+            this.logAll.remove(0);
+        }
     }
 
     public int getAllLines() {

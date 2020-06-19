@@ -5,6 +5,7 @@ import com.berwin.logger.entity.*;
 import com.berwin.logger.utility.FileUtility;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.utility.Utility;
+import com.berwin.logger.views.components.FindPanel;
 import com.berwin.logger.views.components.StyleTable;
 import com.berwin.logger.views.components.VerticalFlowLayout;
 import com.berwin.logger.views.dialogs.ConfigDialog;
@@ -42,7 +43,7 @@ public class MainView extends JFrame implements WindowListener {
     // log level
     private JComboBox<String> cbLogLevels = null;
     // 搜索框
-    private JTextField tfSearch = null;
+    private JTextField tfFilter = null;
     private JCheckBox cbWords = null;
     private JCheckBox cbMatchCase = null;
     // 正则表达式
@@ -50,6 +51,7 @@ public class MainView extends JFrame implements WindowListener {
     // 中间日志
     private JScrollPane spLoggerContainor = null;
     private Filter filter = null;
+    private FindPanel findPanel = null;
     //    private JTextPane tpLoggerContainor = null;
     //
     private StyleTable table = null;
@@ -103,6 +105,15 @@ public class MainView extends JFrame implements WindowListener {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         this.addWindowListener(this);
+        Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
+            KeyEvent e = (KeyEvent) event;
+            if (event.getID() == KeyEvent.KEY_PRESSED) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    this.findPanel.setVisible(false);
+                }
+            }
+        }, AWTEvent.KEY_EVENT_MASK);
+
         this.setLayout(new BorderLayout());
         this.initMenuBar();
         this.initNorth();
@@ -125,47 +136,19 @@ public class MainView extends JFrame implements WindowListener {
         JMenuBar menuBar = new JMenuBar();
         this.setJMenuBar(menuBar);
 
-        JMenu settingMenu = new JMenu("设置");
-        menuBar.add(settingMenu);
+        JMenu editMenu = new JMenu("编辑");
+        menuBar.add(editMenu);
 
-        JMenuItem compileItem = new JMenuItem("常规配置");
-//        compileItem.setActionCommand(",");
-//        compileItem.setMnemonic(KeyEvent.CTRL_MASK | KeyEvent.VK_N);
-        compileItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, ActionEvent.META_MASK));
-        settingMenu.add(compileItem);
-        compileItem.addActionListener(e -> new ConfigDialog().setVisible(true));
+        JMenuItem filterItem = new JMenuItem("过滤");
+        filterItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, ActionEvent.META_MASK));
+        editMenu.add(filterItem);
+        filterItem.addActionListener(e -> this.tfFilter.requestFocus());
 
-        settingMenu.addSeparator();
-
-        JMenuItem aboutItem = new JMenuItem("关于软件");
-        aboutItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.META_MASK));
-        settingMenu.add(aboutItem);
-        aboutItem.addActionListener(e -> {
-            String name = "关于软件";
-            String version = "1.0.0";
-            String content = "安卓日志查看程序软件\r\n@版本: 1.0.0\r\n@作者: 唐博文";
-            String txt = name + "(" + version + ")" + "\r\n\r\n" + content;
-            JOptionPane.showMessageDialog(MainView.this, txt, "",
-                    JOptionPane.INFORMATION_MESSAGE);
-        });
-
-        JMenuItem gitItem = new JMenuItem("开源地址");
-        gitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ActionEvent.META_MASK));
-        settingMenu.add(gitItem);
-        gitItem.addActionListener(e -> {
-            String url = "https://github.com/BerwinGitHub/ANDLogger";
-            this.table.addLog(Log.buildLogForText("开源地址:" + url, Log.LEVEL_I));
-            try {
-                URI u = URI.create(url);
-                Desktop desktop = Desktop.getDesktop();
-                if (desktop.isSupported(Desktop.Action.BROWSE)) {
-                    desktop.browse(u);
-                }
-            } catch (MalformedURLException ex) {
-                ex.printStackTrace();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+        JMenuItem findItem = new JMenuItem("搜索");
+        findItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ActionEvent.META_MASK));
+        editMenu.add(findItem);
+        findItem.addActionListener(e -> {
+            this.findPanel.setVisible(!this.findPanel.isVisible());
         });
 
         // 设备
@@ -213,6 +196,48 @@ public class MainView extends JFrame implements WindowListener {
                 }
             }).setVisible(true);
         });
+
+        // 设置
+        JMenu settingMenu = new JMenu("设置");
+        menuBar.add(settingMenu);
+
+        JMenuItem compileItem = new JMenuItem("常规配置");
+        compileItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, ActionEvent.META_MASK));
+        settingMenu.add(compileItem);
+        compileItem.addActionListener(e -> new ConfigDialog().setVisible(true));
+
+        settingMenu.addSeparator();
+
+        JMenuItem aboutItem = new JMenuItem("关于软件");
+        aboutItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.META_MASK));
+        settingMenu.add(aboutItem);
+        aboutItem.addActionListener(e -> {
+            String name = "关于软件";
+            String version = "1.0.0";
+            String content = "安卓日志查看程序软件\r\n@版本: 1.0.0\r\n@作者: 唐博文";
+            String txt = name + "(" + version + ")" + "\r\n\r\n" + content;
+            JOptionPane.showMessageDialog(MainView.this, txt, "",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        JMenuItem gitItem = new JMenuItem("开源地址");
+        gitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ActionEvent.META_MASK));
+        settingMenu.add(gitItem);
+        gitItem.addActionListener(e -> {
+            String url = "https://github.com/BerwinGitHub/ANDLogger";
+            this.table.addLog(Log.buildLogForText("开源地址:" + url, Log.LEVEL_I));
+            try {
+                URI u = URI.create(url);
+                Desktop desktop = Desktop.getDesktop();
+                if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                    desktop.browse(u);
+                }
+            } catch (MalformedURLException ex) {
+                ex.printStackTrace();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
     }
 
     private void initNorth() {
@@ -249,9 +274,9 @@ public class MainView extends JFrame implements WindowListener {
             this.updateFilter();
         });
         // 搜索框
-        this.tfSearch = new JTextField(40);
-        northSecond.add(tfSearch);
-//        tfSearch.addKeyListener(new KeyAdapter() {
+        this.tfFilter = new JTextField(40);
+        northSecond.add(tfFilter);
+//        tfFilter.addKeyListener(new KeyAdapter() {
 //            @Override
 //            public void keyPressed(KeyEvent e) {
 //                super.keyPressed(e);
@@ -260,7 +285,7 @@ public class MainView extends JFrame implements WindowListener {
 ////                }
 //            }
 //        });
-        tfSearch.getDocument().addDocumentListener(new DocumentListener() {
+        tfFilter.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 MainView.this.updateFilter();
@@ -279,7 +304,7 @@ public class MainView extends JFrame implements WindowListener {
         JButton btnClear = new JButton("清除");
         northSecond.add(btnClear);
         btnClear.addActionListener(e -> {
-            tfSearch.setText("");
+            tfFilter.setText("");
         });
         // 大小写匹配
         this.cbMatchCase = new JCheckBox("Match Case");
@@ -487,6 +512,11 @@ public class MainView extends JFrame implements WindowListener {
         centerCenter.setLayout(new BorderLayout());
         center.add(centerCenter, BorderLayout.CENTER);
 
+        // 搜索
+        this.findPanel = new FindPanel();
+        this.findPanel.setVisible(false);
+        centerCenter.add(findPanel, BorderLayout.NORTH);
+
         this.filter = new Filter();
         this.filter.setSearchFilter(new FilterSearch());
         this.table = new StyleTable(this, this.filter, titles);
@@ -498,6 +528,7 @@ public class MainView extends JFrame implements WindowListener {
         centerCenter.add(centerSouth, BorderLayout.SOUTH);
 
         lblLogLines = new JLabel(this.table.getShowLines() + "/" + this.table.getAllLines() + "/" + this.table.getMaxLines());
+        lblLogLines.setFont(new Font("", Font.ITALIC, 8));
         lblLogLines.setForeground(Color.GRAY);
         centerSouth.add(lblLogLines);
     }
@@ -610,7 +641,7 @@ public class MainView extends JFrame implements WindowListener {
             this.table.addLog(Log.buildLogForText("请在菜单栏选择一个应用包名", Log.LEVEL_E));
             return false;
         }
-//        String search = tfSearch.getText().trim();
+//        String search = tfFilter.getText().trim();
         boolean isRegex = this.cbRegex.isSelected();
         String cmd;
         if (!packageName.equals(MainView.PKG_ANY)) {
@@ -628,7 +659,7 @@ public class MainView extends JFrame implements WindowListener {
 //                cmd = String.format("%s logcat -v time | grep \"^%s|..%s\"", cmdPath, logLevelChar, search);
 //            }
         }
-//            cmd = String.format("%s logcat -v time *:%s | grep \"%s\" & find \"%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), tfSearch.getText());
+//            cmd = String.format("%s logcat -v time *:%s | grep \"%s\" & find \"%s\"", cmdPath, logLevelChar, cbPackages.getSelectedItem(), tfFilter.getText());
         if (this.command != null)
             this.command.stop();
         this.command = new Command(cmd, new Command.CommandListenerAdapter() {
@@ -640,7 +671,7 @@ public class MainView extends JFrame implements WindowListener {
 
             @Override
             public void onMessage(String content) {
-                String target = tfSearch.getText();
+                String target = tfFilter.getText();
                 if (!content.equals(""))
                     table.addLog(Log.buildLogFromText(content));
             }
@@ -675,7 +706,7 @@ public class MainView extends JFrame implements WindowListener {
 
     private void updateFilter() {
         filter.setLogType(this.cbLogLevels.getSelectedIndex());
-        filter.getSearchFilter().setContent(this.tfSearch.getText());
+        filter.getSearchFilter().setContent(this.tfFilter.getText());
         filter.getSearchFilter().setMatchCase(this.cbMatchCase.isSelected());
         filter.getSearchFilter().setRegex(this.cbRegex.isSelected());
         filter.getSearchFilter().setWords(this.cbWords.isSelected());
@@ -763,4 +794,5 @@ public class MainView extends JFrame implements WindowListener {
         }
         return null;
     }
+
 }
