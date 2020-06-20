@@ -51,6 +51,7 @@ public class MainView extends JFrame implements WindowListener {
     // 中间日志
     private JScrollPane spLoggerContainor = null;
     private Filter filter = null;
+    private Find finder = null;
     private FindPanel findPanel = null;
     //    private JTextPane tpLoggerContainor = null;
     //
@@ -144,12 +145,12 @@ public class MainView extends JFrame implements WindowListener {
         editMenu.add(filterItem);
         filterItem.addActionListener(e -> this.tfFilter.requestFocus());
 
+        editMenu.addSeparator();
+
         JMenuItem findItem = new JMenuItem("搜索");
         findItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ActionEvent.META_MASK));
         editMenu.add(findItem);
-        findItem.addActionListener(e -> {
-            this.findPanel.setVisible(!this.findPanel.isVisible());
-        });
+        findItem.addActionListener(e -> this.findPanel.setVisible(!this.findPanel.isVisible()));
 
         // 设备
         devicesMenu = new JMenu("设备(0)");
@@ -264,6 +265,7 @@ public class MainView extends JFrame implements WindowListener {
             this.requestDevices();
             this.requestPackages();
         });
+        northSecond.add(new JLabel("日志过滤:"));
         // log level
         this.cbLogLevels = new JComboBox(LogType.getLogNames());
         this.cbLogLevels.setSelectedIndex(UserDefault.getInstance().getValueForKey("log_level", 0));
@@ -273,18 +275,9 @@ public class MainView extends JFrame implements WindowListener {
 //            this.requestLogcat();
             this.updateFilter();
         });
-        // 搜索框
+        // 过滤框
         this.tfFilter = new JTextField(40);
         northSecond.add(tfFilter);
-//        tfFilter.addKeyListener(new KeyAdapter() {
-//            @Override
-//            public void keyPressed(KeyEvent e) {
-//                super.keyPressed(e);
-//                MainView.this.updateFilter();
-////                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-////                }
-//            }
-//        });
         tfFilter.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -510,16 +503,21 @@ public class MainView extends JFrame implements WindowListener {
         String[] titles = new String[]{"Level", "Time", "PID", "TID", "Tag", "Text"};
         JPanel centerCenter = new JPanel();
         centerCenter.setLayout(new BorderLayout());
+        centerCenter.setBorder(BorderFactory.createTitledBorder(""));
         center.add(centerCenter, BorderLayout.CENTER);
 
-        // 搜索
-        this.findPanel = new FindPanel();
-        this.findPanel.setVisible(false);
-        centerCenter.add(findPanel, BorderLayout.NORTH);
-
+        // 过滤
         this.filter = new Filter();
         this.filter.setSearchFilter(new FilterSearch());
-        this.table = new StyleTable(this, this.filter, titles);
+        // 搜索
+        this.finder = new Find();
+        this.finder.setSearchFilter(new FilterSearch());
+
+        this.table = new StyleTable(this, this.filter, this.finder, titles);
+        // 搜索界面
+        this.findPanel = new FindPanel(this.finder);
+        this.findPanel.setVisible(false);
+        centerCenter.add(findPanel, BorderLayout.NORTH);
         // 中间
         this.spLoggerContainor = new JScrollPane(this.table);
         centerCenter.add(spLoggerContainor, BorderLayout.CENTER);
@@ -713,6 +711,11 @@ public class MainView extends JFrame implements WindowListener {
         this.table.updatedFilter();
     }
 
+
+    public List<FindSelect> updateFinder() {
+        return this.table.updateFinder();
+    }
+
     public void find(String string) {
 //        try {
 //            Document doc = tpLoggerContainor.getDocument();
@@ -795,4 +798,7 @@ public class MainView extends JFrame implements WindowListener {
         return null;
     }
 
+    public void updateFindSelected() {
+        this.table.repaint();
+    }
 }

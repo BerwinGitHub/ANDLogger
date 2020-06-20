@@ -6,9 +6,7 @@ package com.berwin.logger.views.dialogs;
 import com.berwin.logger.views.MainView;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
-import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 
 /**
@@ -32,17 +30,16 @@ public class SelectedDialog extends BaseDialog {
         cbPackages = new JComboBox();
         this.add(cbPackages);
         this.updatePackageList(packages, selected);
-        cbPackages.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-                listener.itemStateChanged(e);
-                SelectedDialog.this.dispose();
-            }
+        cbPackages.addItemListener(e -> {
+            listener.itemStateChanged(e);
+            SelectedDialog.this.dispose();
         });
     }
 
     public void updatePackageList(java.util.List<String> packages, String selected) {
         cbPackages.removeAllItems();
+        if (packages.size() <= 0)
+            return;
         int selectIdx = 0;
         int i = 0;
         for (String pkg : packages) {

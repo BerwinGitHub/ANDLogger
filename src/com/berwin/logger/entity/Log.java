@@ -1,10 +1,9 @@
 package com.berwin.logger.entity;
 
-import org.omg.CORBA.PUBLIC_MEMBER;
-
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Objects;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,6 +25,11 @@ public class Log {
     private String text = "";
 
     private String originText;
+
+    // 被找到的列
+    private List<Integer> findedList;
+    private int row;
+    private int finsSelectedColumn = -1;
 
     public static Log buildLogForText(String text, String level) {
         Log log = new Log();
@@ -81,6 +85,10 @@ public class Log {
             e.printStackTrace();
         }
         return log;
+    }
+
+    public Log() {
+        this.findedList = new ArrayList<>();
     }
 
 
@@ -147,5 +155,33 @@ public class Log {
     public String[] toRowData() {
         //    {"Level", "Time", "PID", "TID", "Tag", "Text"};
         return new String[]{this.level, this.time, this.pid + "", this.tid + "", this.tag, this.text};
+    }
+
+    public boolean isFinded(int column) {
+        return this.findedList.contains(column);
+    }
+
+    public void addFinded(int column) {
+        this.findedList.add(column);
+    }
+
+    public void clearFinded() {
+        this.findedList.clear();
+    }
+
+    public int getRow() {
+        return row;
+    }
+
+    public void setRow(int row) {
+        this.row = row;
+    }
+
+    public void setFindSelectedColumn(int column) {
+        this.finsSelectedColumn = column;
+    }
+
+    public boolean isFindSelectedColumn(int column) {
+        return this.finsSelectedColumn == column;
     }
 }

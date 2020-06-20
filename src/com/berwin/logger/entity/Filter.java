@@ -24,13 +24,13 @@ public class Filter {
         this.searchFilter = searchFilter;
     }
 
-    public boolean matched(Log log) {
+    public boolean filted(Log log) {
         int type = LogType.getTypeByLevel(log.getLevel());
         if (logType == LogType.VERBOSE || type == logType) {
             if (this.searchFilter.matched(log.getOriginText())) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 }

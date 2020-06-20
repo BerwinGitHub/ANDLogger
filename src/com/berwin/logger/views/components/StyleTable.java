@@ -1,8 +1,6 @@
 package com.berwin.logger.views.components;
 
-import com.berwin.logger.entity.Filter;
-import com.berwin.logger.entity.Log;
-import com.berwin.logger.entity.LogType;
+import com.berwin.logger.entity.*;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.views.MainView;
 
@@ -11,20 +9,22 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 
 public class StyleTable extends JTable {
 
     private java.util.List<Log> logAll = new ArrayList<>();
     private java.util.List<Log> logFilted = new ArrayList<>();
     private int[] columnMaxWidths;
-    private DefaultTableModel model = null;
-    private MainView mainView = null;
+    private DefaultTableModel model;
+    private MainView mainView;
     private Filter filter = null;
+    private Find finder = null;
 //    private RowSorter<DefaultTableModel> sorter = null;
 
     private int maxLogRow = 10;
 
-    public StyleTable(MainView frame, Filter filter, Object[] columnNames) {
+    public StyleTable(MainView frame, Filter filter, Find finder, Object[] columnNames) {
         super();
         this.columnMaxWidths = new int[columnNames.length];
         for (int i = 0; i < this.columnMaxWidths.length; i++)
@@ -32,6 +32,7 @@ public class StyleTable extends JTable {
         this.maxLogRow = UserDefault.getInstance().getValueForKey("cache_num", 10000);
         this.mainView = frame;
         this.setFilter(filter);
+        this.setFinder(finder);
         this.model = new DefaultTableModel(null, columnNames);
         this.setModel(this.model);
         // 将奇偶行分别设置为不同颜色
@@ -50,7 +51,8 @@ public class StyleTable extends JTable {
 
     public void addLog(Log log) {
         this.logAll.add(log);
-        if (this.filter.matched(log)) {
+        if (!this.filter.filted(log)) {
+            log.setRow(this.logFilted.size());
             this.logFilted.add(log);
             this.model.addRow(log.toRowData());
             this.tryCheckLogOverflow();
@@ -66,7 +68,8 @@ public class StyleTable extends JTable {
         }
         this.logFilted.clear();
         for (Log log : this.logAll) {
-            if (this.filter.matched(log)) {
+            if (!this.filter.filted(log)) {
+                log.setRow(this.logFilted.size());
                 this.logFilted.add(log);
                 this.model.addRow(log.toRowData());
                 this.fitTableColumns();
@@ -75,6 +78,25 @@ public class StyleTable extends JTable {
         this.mainView.updateLogLines();
         this.tryCheckLogOverflow();
         this.mainView.tryScrollBottom();
+    }
+
+    public List<FindSelect> updateFinder() {
+        List<FindSelect> result = new ArrayList<>();
+        int i = 0;
+        for (Log log : this.logFilted) {
+            if (this.finder.isHasCondition()) {
+                List<Integer> columns = this.finder.finded(log);
+                for (Integer column : columns) {
+                    log.addFinded(column);
+                    result.add(new FindSelect(column, log));
+                }
+            } else {
+                log.clearFinded();
+            }
+            i++;
+        }
+        this.repaint();
+        return result;
     }
 
     public void removeAllItems() {
@@ -140,12 +162,12 @@ public class StyleTable extends JTable {
         }
     }
 
-    public Filter getFilter() {
-        return filter;
-    }
-
     public void setFilter(Filter filter) {
         this.filter = filter;
+    }
+
+    public void setFinder(Find finder) {
+        this.finder = finder;
     }
 
     public void updateConfig(int cacheNum) {
@@ -185,8 +207,18 @@ public class StyleTable extends JTable {
 
         public Component getTableCellRendererComponent(JTable t, Object value,
                                                        boolean isSelected, boolean hasFocus, int row, int column) {
-            String level = StyleTable.this.logFilted.get(row).getLevel();
+            Log log = StyleTable.this.logFilted.get(row);
+            String level = log.getLevel();
             this.setForeground(LogType.getColorByLevel(level));
+            // 处理选中状态
+            if (log.isFinded(column)) {
+                if (log.isFindSelectedColumn(column))
+                    this.setBackground(Color.MAGENTA);
+                else
+                    this.setBackground(Color.YELLOW);
+            } else {
+                this.setBackground(Color.WHITE);
+            }
             return super.getTableCellRendererComponent(t, value, isSelected,
                     hasFocus, row, column);
         }
