@@ -3,6 +3,7 @@ package com.berwin.logger.views.components;
 import com.berwin.logger.entity.*;
 import com.berwin.logger.utility.UserDefault;
 import com.berwin.logger.views.MainView;
+import org.w3c.dom.css.Rect;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -97,6 +98,11 @@ public class StyleTable extends JTable {
         }
         this.repaint();
         return result;
+    }
+
+    public void scrollToRow(int row) {
+        Rectangle rect = StyleTable.this.getCellRect(row, 0, true);
+        StyleTable.this.scrollRectToVisible(rect);
     }
 
     public void removeAllItems() {
@@ -212,10 +218,11 @@ public class StyleTable extends JTable {
             this.setForeground(LogType.getColorByLevel(level));
             // 处理选中状态
             if (log.isFinded(column)) {
-                if (log.isFindSelectedColumn(column))
+                if (log.isFindSelectedColumn(column)) {
                     this.setBackground(Color.MAGENTA);
-                else
+                } else {
                     this.setBackground(Color.YELLOW);
+                }
             } else {
                 this.setBackground(Color.WHITE);
             }

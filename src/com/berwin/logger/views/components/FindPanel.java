@@ -131,5 +131,6 @@ public class FindPanel extends JPanel {
         this.selectedIdx = selectedIdx;
         this.lblMatches.setText(String.format("%d/%d matches", selectedIdx + 1, this.findLog.size()));
         MainView.self.updateFindSelected();
+        MainView.self.getTable().scrollToRow(this.findLog.get(selectedIdx).getLog().getRow());
     }
 }
