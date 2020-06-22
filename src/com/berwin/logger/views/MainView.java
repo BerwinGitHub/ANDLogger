@@ -695,13 +695,6 @@ public class MainView extends JFrame implements WindowListener {
             return false;
         }
         new Command(cmdPath + " logcat -c", null).startWithSynchronize();
-        // 如果在运行需要重新运行
-        if (this.isADBRunning) {
-            if (this.command != null)
-                this.command.stop();
-            this.isADBRunning = false;
-            this.requestLogcat();
-        }
         return true;
     }
 
