@@ -76,8 +76,8 @@ public class StyleTable extends JTable {
                 this.fitTableColumns();
             }
         }
-        this.mainView.updateLogLines();
         this.tryCheckLogOverflow();
+        this.mainView.updateLogLines();
         this.mainView.tryScrollBottom();
     }
 

@@ -17,6 +17,11 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.plaf.ColorUIResource;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetAdapter;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
@@ -131,6 +136,35 @@ public class MainView extends JFrame implements WindowListener {
             this.requestPackages();
 //            this.requestLogcat();
         }
+
+        this.initDragApkEvent();
+    }
+
+    private void initDragApkEvent() {
+        new DropTarget(this, DnDConstants.ACTION_COPY_OR_MOVE, new DropTargetAdapter() {
+            @Override
+            public void drop(DropTargetDropEvent dtde) {
+                try {
+                    if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        dtde.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE);
+                        List<File> files = (List<File>) (dtde.getTransferable()
+                                .getTransferData(DataFlavor.javaFileListFlavor));
+                        for (File file : files) {
+                            String apkPath = file.getAbsolutePath();
+                            if (apkPath.endsWith(".apk"))
+                                MainView.this.requestInstallApk(apkPath);
+                            else
+                                table.addLog(Log.buildLogForText("安装失败，不是APK文件:" + apkPath, Log.LEVEL_E));
+                        }
+                        dtde.dropComplete(true);
+                    } else {
+                        dtde.rejectDrop();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private void initMenuBar() {
@@ -176,24 +210,24 @@ public class MainView extends JFrame implements WindowListener {
         });
 
         // 包名
-        packagesMenu = new JMenu("包名(0)");
+        packagesMenu = new JMenu("应用(0)");
         menuBar.add(packagesMenu);
         packageList = new ArrayList<>();
 
-        JRadioButtonMenuItem packageSelectedItem = new JRadioButtonMenuItem("无包名", true);
+        JRadioButtonMenuItem packageSelectedItem = new JRadioButtonMenuItem("无应用", true);
         packageSelectedItem.setEnabled(false);
         packagesMenu.add(packageSelectedItem);
 
         packagesMenu.addSeparator();
 
-        JMenuItem packageSelectItem = new JMenuItem("选择包名...");
+        JMenuItem packageSelectItem = new JMenuItem("选择应用...");
         packagesMenu.add(packageSelectItem);
         packageSelectItem.addActionListener(e -> {
             new SelectedDialog(this.packageList, packageSelectedItem.getText(), e1 -> {
                 if (e1.getStateChange() == ItemEvent.SELECTED) {
                     String text = (String) e1.getItem();
                     packageSelectedItem.setText(text);
-                    MainView.this.table.addLog(Log.buildLogForText("选择包名:" + text, Log.LEVEL_I));
+                    MainView.this.table.addLog(Log.buildLogForText("选择应用:" + text, Log.LEVEL_I));
                 }
             }).setVisible(true);
         });
@@ -421,34 +455,7 @@ public class MainView extends JFrame implements WindowListener {
             if (JFileChooser.APPROVE_OPTION == result) {
                 String path = fileChooser.getSelectedFile().getPath();
                 UserDefault.getInstance().setValueForKey("last_apk_path", path);
-                String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
-                new Command(cmdPath + " install " + path, new Command.CommandListenerAdapter() {
-                    @Override
-                    public void onStart(String cmd) {
-                        super.onStart(cmd);
-                        table.addLog(Log.buildLogForText("开始安装", Log.LEVEL_I));
-                        table.addLog(Log.buildLogForText(cmd, Log.LEVEL_I));
-                    }
-
-                    @Override
-                    public void onMessage(String content) {
-                        super.onMessage(content);
-                        table.addLog(Log.buildLogForText(content, Log.LEVEL_I));
-                    }
-
-                    @Override
-                    public void onFinished(List<String> result) {
-                        super.onFinished(result);
-                        table.addLog(Log.buildLogForText("安装完成", Log.LEVEL_I));
-                    }
-
-                    @Override
-                    public void onError(String error) {
-                        super.onError(error);
-                        table.addLog(Log.buildLogForText("安装出错", Log.LEVEL_E));
-                        table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
-                    }
-                }).start();
+                this.requestInstallApk(path);
             }
         });
 
@@ -531,6 +538,42 @@ public class MainView extends JFrame implements WindowListener {
         centerSouth.add(lblLogLines);
     }
 
+    private void requestInstallApk(String apkPath) {
+        String cmdPath = UserDefault.getInstance().getValueForKey("adb_path", "");
+        if (cmdPath.equals("")) {
+            this.table.addLog(Log.buildLogForText("请配置ADB路径", Log.LEVEL_E));
+            new ConfigDialog().setVisible(true);
+            return;
+        }
+        new Command(cmdPath + " install " + apkPath, new Command.CommandListenerAdapter() {
+            @Override
+            public void onStart(String cmd) {
+                super.onStart(cmd);
+                table.addLog(Log.buildLogForText("开始安装:" + apkPath, Log.LEVEL_I));
+                table.addLog(Log.buildLogForText(cmd, Log.LEVEL_I));
+            }
+
+            @Override
+            public void onMessage(String content) {
+                super.onMessage(content);
+                table.addLog(Log.buildLogForText(content, Log.LEVEL_I));
+            }
+
+            @Override
+            public void onFinished(List<String> result) {
+                super.onFinished(result);
+                table.addLog(Log.buildLogForText("安装完成", Log.LEVEL_I));
+            }
+
+            @Override
+            public void onError(String error) {
+                super.onError(error);
+                table.addLog(Log.buildLogForText("安装出错", Log.LEVEL_E));
+                table.addLog(Log.buildLogForText(error, Log.LEVEL_E));
+            }
+        }).start();
+    }
+
 
     // 請求連接的設備
     private void requestDevices() {
@@ -609,7 +652,7 @@ public class MainView extends JFrame implements WindowListener {
                 super.onFinished(result);
                 Collections.sort(packageList);
                 packageList.add(0, MainView.PKG_ANY);
-                packagesMenu.setText(String.format("包名(%d)", packageList.size() - 1));
+                packagesMenu.setText(String.format("应用(%d)", packageList.size() - 1));
                 packagesMenu.getItem(0).setText(packageList.get(0));
                 table.addLog(Log.buildLogForText("应用列表加载完成:" + (packageList.size() - 1), Log.LEVEL_I));
             }
@@ -636,7 +679,7 @@ public class MainView extends JFrame implements WindowListener {
 //        String logLevelChar = Logger.LOG_CMD_MARK.get(this.cbLogLevels.getSelectedIndex());
         String packageName = this.getMenuSelected(packagesMenu);
         if (packageName == null) {
-            this.table.addLog(Log.buildLogForText("请在菜单栏选择一个应用包名", Log.LEVEL_E));
+            this.table.addLog(Log.buildLogForText("请在菜单栏选择一个应用", Log.LEVEL_E));
             return false;
         }
 //        String search = tfFilter.getText().trim();
